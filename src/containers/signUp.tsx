@@ -37,10 +37,10 @@ export default function SignUp() {
 
 
     const loginContent = (
-        <div className="flex flex-col items-center mt-5">
-            <h1 className="text-2xl font-bold mb-12 text-[#333]">회원가입</h1>
+        <div className="flex flex-col items-center mt-22">
+            <h1 className="text-3xl font-bold mb-12 text-[#333]">회원가입</h1>
 
-            <form className="flex flex-col w-full gap-5" onSubmit={handleSignUp}>
+            <form className="flex w-[30rem] flex-col gap-5" onSubmit={handleSignUp}>
 
                 <input
                     type="email"

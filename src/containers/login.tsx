@@ -28,12 +28,11 @@ export default function Login() {
         </div>
     );
 
-
     const loginContent = (
-        <div className="flex flex-col items-center mt-10">
-            <h1 className="mb-12 text-2xl font-bold text-[#333]">로그인</h1>
+        <div className="flex flex-col items-center mt-28">
+            <h1 className="mb-12 text-3xl font-bold text-[#333]">로그인</h1>
 
-            <form className="flex w-full flex-col gap-5" onSubmit={handleLogin}>
+            <form className="flex w-[30rem] flex-col gap-5" onSubmit={handleLogin}>
                 <input
                     type="email"
                     placeholder="winshine0326@gmail.com"
