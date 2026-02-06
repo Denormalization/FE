@@ -14,7 +14,7 @@ const DEFAULT_NAV_ITEMS = (router: any): NavItem[] => [
         icon: <img src="/icons/db.svg" alt="책 DB" className="w-7 h-7" />,
         title: '책 DB',
         href: '/db',
-        onClick: () => router.push('/db')
+        onClick: () => router.push('/bookDB')
     },
     {
         icon: <img src="/assets/read.svg" alt="읽고 있는 책" className="w-7 h-7" />,
