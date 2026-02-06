@@ -39,10 +39,19 @@ const BookCard = ({ book }: { book: BookData }) => (
     </div>
 );
 
-export function LeftHomeContent() {
+export function LeftHomeContent({
+    searchTerm,
+    onSearchChange,
+    books
+}: {
+    searchTerm: string;
+    onSearchChange: (value: string) => void;
+    books: BookData[];
+}) {
     return (
-        <div className="flex h-full flex-col">
+        <div className="flex h-full w-full flex-col px-24">
             <div className="mt-6 mb-5 flex items-center gap-4">
+
                 <img
                     src="/icons/search.svg"
                     alt="search"
@@ -51,6 +60,8 @@ export function LeftHomeContent() {
                 <input
                     type="text"
                     placeholder="읽고 있는 책을 검색하세요"
+                    value={searchTerm}
+                    onChange={(e) => onSearchChange(e.target.value)}
                     className="
                         w-full bg-transparent
                         text-lg text-gray-700
@@ -60,8 +71,8 @@ export function LeftHomeContent() {
                 />
             </div>
 
-            <div className="grid grid-cols-2 gap-x-8 gap-y-6">
-                {BOOKS.slice(0, 4).map(book => (
+            <div className="grid grid-cols-2 gap-x-20 gap-y-6">
+                {books.map(book => (
                     <BookCard key={book.id} book={book} />
                 ))}
             </div>
@@ -69,11 +80,11 @@ export function LeftHomeContent() {
     );
 }
 
-export function RightHomeContent() {
+export function RightHomeContent({ books }: { books: BookData[] }) {
     return (
         <div className="flex h-full flex-col">
             <div className="grid grid-cols-2 gap-x-20 gap-y-6">
-                {BOOKS.slice(4, 8).map(book => (
+                {books.map(book => (
                     <BookCard key={book.id} book={book} />
                 ))}
             </div>

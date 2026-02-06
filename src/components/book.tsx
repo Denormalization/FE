@@ -1,9 +1,7 @@
 'use client';
 
-import { ReactNode } from 'react';
 import Navigation from './navigation';
 import { BookProps } from '@/types/components';
-
 
 export default function Book({ leftContent, rightContent }: BookProps) {
     return (
