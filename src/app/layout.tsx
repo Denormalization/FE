@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import "./globals.css";
 
 export const metadata: Metadata = {
   title: "DMZ",
@@ -12,7 +13,7 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="en">
-      <body style={{ display: "flex" }}>
+      <body className="min-h-screen flex items-center justify-center overflow-hidden relative bg-gradient-to-br from-[#0a0a1a] via-[#1a1a3e] to-[#2a2a5e]" style={{ fontFamily: "'Diphylleia', serif" }}>
         {children}
       </body>
     </html>
