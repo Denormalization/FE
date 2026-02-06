@@ -3,7 +3,7 @@
 import { useState } from 'react';
 import Link from 'next/link';
 import Book from './book';
-import { NavItem } from './navigation';
+import { NavItem } from '@/types/components';
 
 export default function SignUp() {
     const [email, setEmail] = useState('');
