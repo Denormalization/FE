@@ -1,0 +1,53 @@
+@import "tailwindcss";
+
+@keyframes stars {
+    from {
+        transform: translateY(0);
+    }
+
+    to {
+        transform: translateY(-1000px);
+    }
+}
+
+body::before {
+    content: '';
+    position: absolute;
+    width: 200%;
+    height: 200%;
+    background-image:
+        radial-gradient(4px 4px at 20% 30%, white, transparent),
+        radial-gradient(3px 3px at 60% 70%, white, transparent),
+        radial-gradient(2px 2px at 50% 50%, white, transparent),
+        radial-gradient(5px 5px at 80% 10%, white, transparent),
+        radial-gradient(4px 4px at 90% 60%, white, transparent),
+        radial-gradient(3px 3px at 33% 80%, white, transparent),
+        radial-gradient(5px 5px at 70% 40%, white, transparent);
+    background-size:
+        220px 220px,
+        320px 320px,
+        260px 260px,
+        420px 420px,
+        380px 380px,
+        480px 480px,
+        520px 520px;
+    background-position:
+        0 0,
+        60px 90px,
+        150px 300px,
+        100px 140px,
+        260px 80px,
+        340px 220px,
+        140px 320px;
+    animation: stars 120s linear infinite;
+    opacity: 0.65;
+}
+
+body::after {
+    content: '';
+    position: fixed;
+    inset: 0;
+    background: url('/assets/BG.svg') no-repeat center center;
+    background-size: cover;
+    z-index: -1;
+}
