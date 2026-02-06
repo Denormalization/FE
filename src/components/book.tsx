@@ -17,7 +17,7 @@ export default function Book({ leftContent, rightContent }: BookProps) {
                 >
                     <div
                         className="
-                            flex h-full w-1/2 items-center justify-center overflow-hidden rounded-l-lg
+                            flex h-full w-1/2 flex-col overflow-hidden rounded-l-lg
                             bg-gradient-to-r from-[#FAFAFA] to-[#FAFAFA]
                             [transform-origin:right_center]
                             [-webkit-transform:rotateY(-5deg)]
@@ -26,32 +26,34 @@ export default function Book({ leftContent, rightContent }: BookProps) {
                         "
                     >
                         {leftContent || (
-                            <svg
-                                className="h-[15rem] w-[15rem] opacity-30"
-                                viewBox="0 0 200 200"
-                            >
-                                <path
-                                    d="M 50 150 Q 80 100 100 80 Q 120 60 150 50"
-                                    stroke="#BA3C3C"
-                                    strokeWidth="3"
-                                    fill="none"
-                                    strokeLinecap="round"
-                                />
-                                <path
-                                    d="M 100 80 L 160 140"
-                                    stroke="#BA3C3C"
-                                    strokeWidth="8"
-                                    fill="none"
-                                    strokeLinecap="round"
-                                />
-                                <path
-                                    d="M 160 140 L 140 150"
-                                    stroke="#BA3C3C"
-                                    strokeWidth="8"
-                                    fill="none"
-                                    strokeLinecap="round"
-                                />
-                            </svg>
+                            <div className="flex flex-1 items-center justify-center">
+                                <svg
+                                    className="h-[15rem] w-[15rem] opacity-30"
+                                    viewBox="0 0 200 200"
+                                >
+                                    <path
+                                        d="M 50 150 Q 80 100 100 80 Q 120 60 150 50"
+                                        stroke="#BA3C3C"
+                                        strokeWidth="3"
+                                        fill="none"
+                                        strokeLinecap="round"
+                                    />
+                                    <path
+                                        d="M 100 80 L 160 140"
+                                        stroke="#BA3C3C"
+                                        strokeWidth="8"
+                                        fill="none"
+                                        strokeLinecap="round"
+                                    />
+                                    <path
+                                        d="M 160 140 L 140 150"
+                                        stroke="#BA3C3C"
+                                        strokeWidth="8"
+                                        fill="none"
+                                        strokeLinecap="round"
+                                    />
+                                </svg>
+                            </div>
                         )}
                     </div>
 
@@ -59,7 +61,6 @@ export default function Book({ leftContent, rightContent }: BookProps) {
                         className="
                             flex h-full w-1/2 flex-col overflow-hidden rounded-r-lg
                             bg-gradient-to-l from-[#FAFAFA] to-[#FAFAFA]
-                            px-24 py-[4.5rem]
                             [transform-origin:left_center]
                             transform rotate-y-[5deg]
                             shadow-[inset_0.625rem_0_1.25rem_rgba(0,0,0,0.1),_0.3125rem_0_0.9375rem_rgba(0,0,0,0.2)]
@@ -67,6 +68,7 @@ export default function Book({ leftContent, rightContent }: BookProps) {
                     >
                         {rightContent}
                     </div>
+
 
                     <div
                         className="

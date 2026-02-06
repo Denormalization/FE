@@ -82,7 +82,7 @@ export function LeftHomeContent({
 
 export function RightHomeContent({ books }: { books: BookData[] }) {
     return (
-        <div className="flex h-full flex-col">
+        <div className="flex h-full w-full flex-col px-24 py-[4.5rem]">
             <div className="grid grid-cols-2 gap-x-20 gap-y-6">
                 {books.map(book => (
                     <BookCard key={book.id} book={book} />

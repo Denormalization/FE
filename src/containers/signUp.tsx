@@ -25,13 +25,16 @@ export default function SignUp() {
     };
 
     const airplaneIcon = (
-        <img src="/assets/airplane.svg" alt="비행기" className="
+        <div className="flex h-full items-center justify-center">
+            <img src="/assets/airplane.svg" alt="비행기" className="
     w-80 h-80 opacity-80
     animate-[float_4s_ease-in-out_infinite]
     hover:scale-[1.03] transition-transform duration-500
 "
-        />
+            />
+        </div>
     );
+
 
     const loginContent = (
         <div className="flex flex-col items-center mt-5">
