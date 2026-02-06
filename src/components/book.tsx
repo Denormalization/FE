@@ -1,10 +1,11 @@
 'use client';
 
-import { BookProps } from '@/types/components';
+import { ReactNode } from 'react';
 import Navigation from './navigation';
+import { BookProps } from '@/types/components';
 
 
-export default function Book({ leftContent, rightContent, navItems }: BookProps) {
+export default function Book({ leftContent, rightContent }: BookProps) {
     return (
         <div className="flex items-center justify-center">
             <div className="relative">
@@ -19,7 +20,7 @@ export default function Book({ leftContent, rightContent, navItems }: BookProps)
                     <div
                         className="
                             flex h-full w-1/2 items-center justify-center overflow-hidden rounded-l-lg
-                            bg-gradient-to-r from-[#e8e8e8] to-[#f8f8f8]
+                            bg-gradient-to-r from-[#FAFAFA] to-[#FAFAFA]
                             [transform-origin:right_center]
                             [-webkit-transform:rotateY(-5deg)]
                             transform rotate-y-[-5deg]
@@ -33,21 +34,21 @@ export default function Book({ leftContent, rightContent, navItems }: BookProps)
                             >
                                 <path
                                     d="M 50 150 Q 80 100 100 80 Q 120 60 150 50"
-                                    stroke="#e57373"
+                                    stroke="#BA3C3C"
                                     strokeWidth="3"
                                     fill="none"
                                     strokeLinecap="round"
                                 />
                                 <path
                                     d="M 100 80 L 160 140"
-                                    stroke="#e57373"
+                                    stroke="#BA3C3C"
                                     strokeWidth="8"
                                     fill="none"
                                     strokeLinecap="round"
                                 />
                                 <path
                                     d="M 160 140 L 140 150"
-                                    stroke="#e57373"
+                                    stroke="#BA3C3C"
                                     strokeWidth="8"
                                     fill="none"
                                     strokeLinecap="round"
@@ -59,7 +60,7 @@ export default function Book({ leftContent, rightContent, navItems }: BookProps)
                     <div
                         className="
                             flex h-full w-1/2 flex-col overflow-hidden rounded-r-lg
-                            bg-gradient-to-l from-[#e8e8e8] to-[#f8f8f8]
+                            bg-gradient-to-l from-[#FAFAFA] to-[#FAFAFA]
                             px-24 py-[4.5rem]
                             [transform-origin:left_center]
                             transform rotate-y-[5deg]
@@ -78,9 +79,7 @@ export default function Book({ leftContent, rightContent, navItems }: BookProps)
                     />
                 </div>
 
-                {navItems && navItems.length > 0 && (
-                    <Navigation items={navItems} />
-                )}
+                <Navigation />
             </div>
         </div>
     );

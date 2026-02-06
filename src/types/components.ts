@@ -13,5 +13,4 @@ export interface NavigationProps {
 export interface BookProps {
     leftContent?: ReactNode;
     rightContent: ReactNode;
-    navItems?: NavItem[];
 }

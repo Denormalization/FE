@@ -1,9 +1,35 @@
 'use client';
 
-import { ReactNode } from 'react';
-import { NavigationProps } from '@/types/components';
+import { useRouter } from 'next/navigation';
+import { NavItem } from '@/types/components';
 
-export default function Navigation({ items }: NavigationProps) {
+const DEFAULT_NAV_ITEMS = (router: any): NavItem[] => [
+    {
+        icon: <img src="/icons/home.svg" alt="홈" className="w-7 h-7" />,
+        title: '홈',
+        onClick: () => router.push('/home')
+    },
+    {
+        icon: <img src="/icons/db.svg" alt="책 DB" className="w-7 h-7" />,
+        title: '책 DB',
+        onClick: () => router.push('/db')
+    },
+    {
+        icon: <img src="/assets/read.svg" alt="읽고 있는 책" className="w-7 h-7" />,
+        title: '읽고 있는 책',
+        onClick: () => router.push('/read')
+    },
+    {
+        icon: <img src="/icons/mypage.svg" alt="마이페이지" className="w-7 h-7" />,
+        title: '마이페이지',
+        onClick: () => router.push('/mypage')
+    }
+];
+
+export default function Navigation() {
+    const router = useRouter();
+    const items = DEFAULT_NAV_ITEMS(router);
+
     return (
         <nav className="absolute right-[-1.5rem] top-0 z-[5] flex flex-col gap-2">
             {items.map((item, index) => (
