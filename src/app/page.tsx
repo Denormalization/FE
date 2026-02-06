@@ -1,5 +1,5 @@
-export default function Home() {
-  return (
-    <div></div>
-  );
+import Login from '@/components/login';
+
+export default function LoginPage() {
+  return <Login />;
 }
