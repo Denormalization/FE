@@ -1,5 +1,5 @@
-export default function Home() {
-  return (
-    <div></div>
-  );
+import Login from '@/containers/login';
+
+export default function LoginPage() {
+  return <Login />;
 }
