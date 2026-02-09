@@ -1,10 +1,12 @@
 'use client';
 
 import { useEffect, useState } from 'react';
+import { useRouter } from 'next/navigation';
 import Book from '../components/book';
 import { POEM_TEXT } from '@/mock/read';
 
 export default function Read() {
+    const router = useRouter();
     const [showLeft, setShowLeft] = useState(false);
     const [showRight, setShowRight] = useState(false);
 
@@ -76,6 +78,7 @@ export default function Read() {
                 </button>
 
                 <button
+                    onClick={() => router.push('/read/full')}
                     className="
                         flex h-14 w-28 items-center justify-center
                         rounded-lg text-white font-bold text-sm
