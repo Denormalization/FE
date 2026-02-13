@@ -3,7 +3,8 @@
 import React, { useEffect, useRef, useState } from 'react';
 import * as d3 from 'd3';
 import Book from '@/components/book';
-import { KNOWLEDGE_GRAPH_DATA, GraphNode, GraphLink } from '@/mock/graph';
+import { KNOWLEDGE_GRAPH_DATA } from '@/mock/graph';
+import { GraphNode, GraphLink } from '@/types/graph';
 
 export default function BookDB() {
     const svgRef = useRef<SVGSVGElement>(null);
@@ -35,7 +36,7 @@ export default function BookDB() {
         const simulation = d3.forceSimulation<GraphNode>(KNOWLEDGE_GRAPH_DATA.nodes)
             .force('link', d3.forceLink<GraphNode, GraphLink>(KNOWLEDGE_GRAPH_DATA.links)
                 .id(d => d.id)
-                .distance(d => ((d.source as GraphNode).id === 'center' ? 300 : 150)))
+                .distance(d => ((d.source as GraphNode).type === 'main' ? 300 : 150)))
             .force('charge', d3.forceManyBody().strength(-1200))
             .force('center', d3.forceCenter(width / 2, height / 2))
             .force('collision', d3.forceCollide<GraphNode>().radius(d => d.radius + 30));
@@ -66,7 +67,7 @@ export default function BookDB() {
                     })
                     .on('end', e => {
                         if (!e.active) simulation.alphaTarget(0);
-                        if (e.subject.id !== 'center') {
+                        if (e.subject.type !== 'main') {
                             e.subject.fx = null;
                             e.subject.fy = null;
                         }
@@ -93,10 +94,10 @@ export default function BookDB() {
 
         node.append('text')
             .text(d => d.label)
-            .attr('dy', d => (d.id === 'center' ? '0.35em' : d.radius + 20))
+            .attr('dy', d => (d.type === 'main' ? '0.35em' : d.radius + 20))
             .attr('text-anchor', 'middle')
-            .attr('fill', d => (d.id === 'center' ? '#fff' : '#4B5563'))
-            .attr('font-size', d => (d.id === 'center' ? '1.5rem' : '0.875rem'))
+            .attr('fill', d => (d.type === 'main' ? '#fff' : '#4B5563'))
+            .attr('font-size', d => (d.type === 'main' ? '1.5rem' : '0.875rem'))
             .attr('font-weight', '700')
             .attr('pointer-events', 'none');
 
@@ -110,11 +111,14 @@ export default function BookDB() {
             node.attr('transform', d => `translate(${(d as any).x}, ${(d as any).y})`);
         });
 
-        const center = KNOWLEDGE_GRAPH_DATA.nodes.find(n => n.id === 'center');
-        if (center) {
-            center.fx = width / 2;
-            center.fy = height / 2;
-        }
+        const mainNodes = KNOWLEDGE_GRAPH_DATA.nodes.filter(n => n.type === 'main');
+        const mainNodeRadius = 150;
+
+        mainNodes.forEach((node, index) => {
+            const angle = (index / mainNodes.length) * 2 * Math.PI;
+            node.fx = width / 2 + mainNodeRadius * Math.cos(angle);
+            node.fy = height / 2 + mainNodeRadius * Math.sin(angle);
+        });
 
         return () => { simulation.stop(); };
     }, []);
