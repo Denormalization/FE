@@ -75,7 +75,9 @@ export default function Read() {
                             flex h-14 w-28 items-center justify-center
                             rounded-lg text-white font-bold
                             bg-gradient-to-br from-[#409659] to-[#38844E]
+                            shadow-[0_4px_10px_rgba(0,0,0,0.2)]
                             transition-all duration-300
+                            hover:translate-x-20 hover:scale-105 hover:shadow-[5px_5px_15px_rgba(0,0,0,0.3)] hover:brightness-110
                             active:scale-95
                             cursor-pointer
                             pr-4
@@ -90,7 +92,9 @@ export default function Read() {
                             flex h-14 w-28 items-center justify-center
                             rounded-lg text-white font-bold
                             bg-gradient-to-br from-[#409659] to-[#38844E]
+                            shadow-[0_4px_10px_rgba(0,0,0,0.2)]
                             transition-all duration-300
+                            hover:translate-x-20 hover:scale-105 hover:shadow-[5px_5px_15px_rgba(0,0,0,0.3)] hover:brightness-110
                             active:scale-95
                             cursor-pointer
                             pr-4
