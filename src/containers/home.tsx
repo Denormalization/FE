@@ -9,7 +9,6 @@ const BookCard = ({ book }: { book: BookData }) => {
     const { triggerFlip } = useBook();
 
     const handleClick = () => {
-        triggerFlip();
         router.push(`/bookDetail?id=${book.id}`);
     };
 

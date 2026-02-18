@@ -11,7 +11,6 @@ export default function Navigation() {
     const items = GET_NAV_ITEMS(router);
 
     const handleNavigation = (e: React.MouseEvent, item: any) => {
-        triggerFlip();
         item.onClick();
     };
 

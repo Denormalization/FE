@@ -10,7 +10,6 @@ export function LeftBookDetailContent({ book }: { book: BookData }) {
     const { triggerFlip } = useBook();
 
     const handleBack = () => {
-        triggerFlip();
         router.back();
     };
 

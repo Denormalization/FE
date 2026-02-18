@@ -63,7 +63,7 @@ export default function Read() {
 
     useEffect(() => {
         setBookContent(leftContent, rightContent);
-    }, [showLeft, showRight]);
+    }, []);
 
     return (
         <div className="fixed inset-0 pointer-events-none flex items-center justify-center">
