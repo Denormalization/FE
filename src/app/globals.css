@@ -138,3 +138,13 @@ body::after {
 .animate-pop-in {
     animation: pop-in 0.5s cubic-bezier(0.34, 1.56, 0.64, 1) forwards;
 }
+
+.preserve-3d {
+    transform-style: preserve-3d;
+    -webkit-transform-style: preserve-3d;
+}
+
+.perspective-2000 {
+    perspective: 2000px;
+    -webkit-perspective: 2000px;
+}
