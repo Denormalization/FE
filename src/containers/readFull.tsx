@@ -13,6 +13,7 @@ import { POEM_TEXT } from '@/mock/read';
 
 export default function ReadFull() {
     const [showSettings, setShowSettings] = useState(false);
+    const [showBars, setShowBars] = useState(true);
     const [viewerSettings, setViewerSettings] = useState<ViewerSettings>({
         ...VIEWER_DEFAULTS,
     });
@@ -46,12 +47,19 @@ export default function ReadFull() {
         }
     };
 
+    const handleDoubleClick = () => {
+        setShowBars((prev) => !prev);
+    };
+
     const themeData = VIEWER_THEMES.find((t) => t.id === viewerSettings.theme);
     const themeBg = themeData?.bg ?? 'bg-white';
 
     return (
-        <div className={`w-full h-full ${themeBg} flex flex-col overflow-hidden relative transition-colors`}>
-            <ReadFullHeader title={READ_FULL_CONSTANTS.TITLE} />
+        <div 
+            className={`w-full h-full ${themeBg} flex flex-col overflow-hidden relative transition-colors`}
+            onDoubleClick={handleDoubleClick}
+        >
+            <ReadFullHeader title={READ_FULL_CONSTANTS.TITLE} showBars={showBars} theme={viewerSettings.theme} />
             <ReadFullContent content={POEM_TEXT} viewerSettings={viewerSettings} />
             <ReadFullFooter
                 currentPage={READ_FULL_CONSTANTS.CURRENT_PAGE}
@@ -59,6 +67,8 @@ export default function ReadFull() {
                 onPageChange={handlePageChange}
                 onSettingsClick={handleSettingsClick}
                 onFullscreenClick={handleFullscreenClick}
+                showBars={showBars}
+                theme={viewerSettings.theme}
             />
 
             {/* 뷰어 설정 패널 */}
