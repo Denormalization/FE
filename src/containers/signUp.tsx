@@ -1,12 +1,13 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
-import Book from '../components/book';
+import { useBook } from '@/context/bookContext';
 
 export default function SignUp() {
     const router = useRouter();
+    const { setBookContent } = useBook();
     const [email, setEmail] = useState('');
     const [password, setPassword] = useState('');
     const [confirmPassword, setConfirmPassword] = useState('');
@@ -126,5 +127,9 @@ export default function SignUp() {
         </div>
     );
 
-    return <Book leftContent={airplaneIcon} rightContent={loginContent} />;
+    useEffect(() => {
+        setBookContent(airplaneIcon, loginContent);
+    }, []);
+
+    return null;
 }

@@ -3,6 +3,8 @@ import { Noto_Sans_KR, Noto_Serif_KR } from "next/font/google";
 import "./globals.css";
 import { ToastContainer } from "react-toastify";
 import "react-toastify/dist/ReactToastify.css";
+import { BookProvider } from "@/context/bookContext";
+import BookShell from "@/components/bookShell";
 
 const notoSansKR = Noto_Sans_KR({
   subsets: ["latin"],
@@ -42,6 +44,11 @@ export default function RootLayout({
           pauseOnHover
           theme="light"
         />
+        <BookProvider>
+          <BookShell>
+            {children}
+          </BookShell>
+        </BookProvider>
       </body>
     </html>
   );
