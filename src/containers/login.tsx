@@ -1,12 +1,14 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import Book from '../components/ui/book';
+import { useBook } from '@/context/bookContext';
 
 export default function Login() {
     const router = useRouter();
+    const { setBookContent } = useBook();
     const [email, setEmail] = useState('');
     const [password, setPassword] = useState('');
     const [showPassword, setShowPassword] = useState(false);
@@ -106,5 +108,9 @@ export default function Login() {
         </div>
     );
 
-    return <Book leftContent={airplaneIcon} rightContent={loginContent} />;
+    useEffect(() => {
+        setBookContent(airplaneIcon, loginContent);
+    }, []);
+
+    return null;
 }

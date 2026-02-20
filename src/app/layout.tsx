@@ -2,6 +2,8 @@ import type { Metadata } from "next";
 import { Noto_Sans_KR, Noto_Serif_KR } from "next/font/google";
 import "@/styles/globals.css";
 import TopLoadingBar from "@/components/layout/TopLoadingBar";
+import { BookProvider } from "@/context/bookContext";
+import BookShell from "@/components/bookShell";
 
 const notoSansKR = Noto_Sans_KR({
   subsets: ["latin"],
@@ -30,6 +32,11 @@ export default function RootLayout({
       <body className="min-h-screen flex items-center justify-center overflow-hidden relative bg-gradient-to-br from-[#0a0a1a] via-[#1a1a3e] to-[#2a2a5e]" style={{ fontFamily: "'Diphylleia', serif" }}>
         <TopLoadingBar />
         {children}
+        <BookProvider>
+          <BookShell>
+            {children}
+          </BookShell>
+        </BookProvider>
       </body>
     </html>
   );

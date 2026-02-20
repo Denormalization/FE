@@ -10,7 +10,7 @@ export const GET_NAV_ITEMS = (router: any): NavItem[] => [
     {
         icon: <img src="/icons/db.svg" alt="책 DB" className="w-7 h-7" />,
         title: '책 DB',
-        href: '/db',
+        href: '/bookDB',
         onClick: () => router.push('/bookDB')
     },
     {
