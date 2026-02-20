@@ -28,9 +28,10 @@ export default function Book() {
         const isPathChanged = lastAnimatedPathnameRef.current !== pathname;
         const isFlipTriggered = lastFlipKeyRef.current !== flipKey;
 
-        if (isPathChanged || isFlipTriggered) {
+        if (isFlipTriggered || isPathChanged) {
             lastAnimatedPathnameRef.current = pathname;
             lastFlipKeyRef.current = flipKey;
+
             setIsFlipping(true);
 
             const contentTimer = setTimeout(() => {
@@ -45,12 +46,8 @@ export default function Book() {
                 clearTimeout(contentTimer);
                 clearTimeout(timer);
             };
-        } else {
-            if (!isFlipping) {
-                setPageContent({ left: leftContent, right: rightContent });
-            }
         }
-    }, [leftContent, rightContent, pathname, flipKey, isFlipping]);
+    }, [leftContent, rightContent, pathname, flipKey]);
 
     return (
         <div className="flex items-center justify-center">
@@ -59,8 +56,8 @@ export default function Book() {
                     className="
                         relative z-10 flex
                         w-[80rem] h-[50rem]
-                        [transform-style:preserve-3d]
-                        perspective-[2000px]
+                        preserve-3d
+                        perspective-2000
                     "
                 >
                     <div
@@ -80,7 +77,7 @@ export default function Book() {
                             z-[1]
                         "
                     >
-                        {rightContent}
+                        {pageContent.right}
                     </div>
 
                     {isFlipping && prevContent && (

@@ -63,7 +63,7 @@ export default function Read() {
 
     useEffect(() => {
         setBookContent(leftContent, rightContent);
-    }, [showLeft, showRight]);
+    }, []);
 
     return (
         <div className="absolute inset-0 pointer-events-none">

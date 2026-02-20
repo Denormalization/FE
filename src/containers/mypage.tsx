@@ -1,43 +1,55 @@
 'use client';
 
+import { useRouter } from 'next/navigation';
+import { useBook } from '@/context/bookContext';
 import { BookData, BOOKS } from '@/mock/home';
 
-const BookCard = ({ book }: { book: BookData }) => (
-    <div
-        className="
-            group flex flex-col items-center
-            cursor-pointer
-            transition-transform duration-300
-            hover:-translate-y-1
-        "
-    >
+const BookCard = ({ book }: { book: BookData }) => {
+    const router = useRouter();
+    const { triggerFlip } = useBook();
+
+    const handleClick = () => {
+        router.push(`/bookDetail?id=${book.id}`);
+    };
+
+    return (
         <div
+            onClick={handleClick}
             className="
-                w-[14rem] h-[18rem] mb-3
-                flex items-center justify-center
-                overflow-hidden rounded-md
-                bg-gradient-to-br from-gray-100 to-gray-200
-                border border-gray-200
-                shadow-sm
-                transition-shadow duration-300
-                group-hover:shadow-md
+                group flex flex-col items-center
+                cursor-pointer
+                transition-transform duration-300
+                hover:-translate-y-1
             "
         >
-            <div className="px-4 text-center text-sm text-gray-500 leading-relaxed">
-                {book.title}
+            <div
+                className="
+                    w-[14rem] h-[18rem] mb-3
+                    flex items-center justify-center
+                    overflow-hidden rounded-md
+                    bg-gradient-to-br from-gray-100 to-gray-200
+                    border border-gray-200
+                    shadow-sm
+                    transition-shadow duration-300
+                    group-hover:shadow-md
+                "
+            >
+                <div className="px-4 text-center text-sm text-gray-500 leading-relaxed">
+                    {book.title}
+                </div>
+            </div>
+
+            <div className="text-center">
+                <h3 className="text-sm font-semibold text-gray-800 leading-snug">
+                    {book.title}
+                </h3>
+                <p className="text-xs text-gray-500">
+                    {book.author}
+                </p>
             </div>
         </div>
-
-        <div className="text-center">
-            <h3 className="text-sm font-semibold text-gray-800 leading-snug">
-                {book.title}
-            </h3>
-            <p className="text-xs text-gray-500">
-                {book.author}
-            </p>
-        </div>
-    </div>
-);
+    );
+};
 
 export function LeftHomeContent({
     searchTerm,

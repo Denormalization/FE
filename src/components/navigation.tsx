@@ -11,7 +11,6 @@ export default function Navigation() {
     const items = GET_NAV_ITEMS(router);
 
     const handleNavigation = (e: React.MouseEvent, item: any) => {
-        triggerFlip();
         item.onClick();
     };
 
@@ -28,10 +27,10 @@ export default function Navigation() {
                             flex h-14 w-16 items-center justify-center
                             rounded-lg text-white
                             bg-gradient-to-br from-[#c85a54] to-[#b94a44]
-                            transition-all duration-200
+                            transition-all duration-300
                             active:scale-95
                             cursor-pointer
-                            ${isActive ? 'brightness-110 ring-2 ring-white/30' : 'opacity-90 hover:opacity-100'}
+                            ${isActive ? 'brightness-110 ring-2 ring-white/30 translate-x-0' : 'opacity-90 hover:opacity-100 -translate-x-4 hover:translate-x-[-0.5rem]'}
                             ${index !== items.length - 1 ? 'border-b border-white/20' : ''}
                         `}
                     >
