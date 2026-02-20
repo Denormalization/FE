@@ -55,8 +55,8 @@ export default function ReadFull() {
     const themeBg = themeData?.bg ?? 'bg-white';
 
     return (
-        <div 
-            className={`w-full h-full ${themeBg} flex flex-col overflow-hidden relative transition-colors`}
+        <div
+            className={`w-full h-full ${themeBg} flex flex-col overflow-hidden relative transition-colors pointer-events-auto`}
             onDoubleClick={handleDoubleClick}
         >
             <ReadFullHeader title={READ_FULL_CONSTANTS.TITLE} showBars={showBars} theme={viewerSettings.theme} />
