@@ -66,9 +66,9 @@ export default function Read() {
     }, [showLeft, showRight]);
 
     return (
-        <div className="fixed inset-0 pointer-events-none flex items-center justify-center">
+        <div className="absolute inset-0 pointer-events-none">
             <div className="relative w-[80rem] h-[50rem]">
-                <div className="absolute right-[-1.5rem] bottom-0 z-[100] flex flex-col gap-2 pointer-events-auto">
+                <div className="absolute right-[-1.5rem] bottom-0 flex flex-col gap-2 pointer-events-auto">
 
                     <button
                         className="
