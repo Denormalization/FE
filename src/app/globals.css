@@ -1,5 +1,18 @@
 @import "tailwindcss";
 
+/* Font Family Classes - Using CSS Variables */
+.font-pretendard {
+    font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", "Noto Sans KR", "Malgun Gothic", sans-serif !important;
+}
+
+.font-bookmyungjo {
+    font-family: var(--font-noto-serif-kr), serif !important;
+}
+
+.font-thejamsil {
+    font-family: var(--font-noto-sans-kr), system-ui, -apple-system, BlinkMacSystemFont, sans-serif !important;
+}
+
 @keyframes stars {
     from {
         transform: translateY(0);

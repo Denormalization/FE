@@ -6,14 +6,14 @@ export const VIEWER_THEMES = [
 ] as const;
 
 export const VIEWER_FONTS = [
-    { id: 'gamja', label: '감자체' },
-    { id: 'sungchan', label: '숭찬체' },
-    { id: 'dukggulim', label: '덕꿀임' },
+    { id: 'pretendard', label: '기본체' },
+    { id: 'bookmyungjo', label: '북명조' },
+    { id: 'thejamsil', label: '더잠실' },
 ] as const;
 
 export const VIEWER_DEFAULTS = {
     theme: 'white',
-    font: 'gamja',
+    font: 'pretendard',
     fontSize: 4,
     lineHeight: 2,
     padding: 1,
