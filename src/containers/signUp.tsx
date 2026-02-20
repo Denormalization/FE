@@ -3,6 +3,7 @@
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
+import Book from '../components/ui/book';
 import { useBook } from '@/context/bookContext';
 
 export default function SignUp() {

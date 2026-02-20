@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
+import Book from '../components/ui/book';
 import { useBook } from '@/context/bookContext';
 import { POEM_TEXT } from '@/mock/read';
 

@@ -1,5 +1,6 @@
 'use client';
 
+import Book from '@/components/ui/book';
 import { useState, useEffect } from 'react';
 import { useBook } from '@/context/bookContext';
 import { LeftHomeContent, RightHomeContent } from '@/containers/home';

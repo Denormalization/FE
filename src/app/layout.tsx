@@ -3,6 +3,8 @@ import { Noto_Sans_KR, Noto_Serif_KR } from "next/font/google";
 import "./globals.css";
 import { ToastContainer } from "react-toastify";
 import "react-toastify/dist/ReactToastify.css";
+import "@/styles/globals.css";
+import TopLoadingBar from "@/components/layout/TopLoadingBar";
 import { BookProvider } from "@/context/bookContext";
 import BookShell from "@/components/bookShell";
 
@@ -44,6 +46,8 @@ export default function RootLayout({
           pauseOnHover
           theme="light"
         />
+        <TopLoadingBar />
+        {children}
         <BookProvider>
           <BookShell>
             {children}
