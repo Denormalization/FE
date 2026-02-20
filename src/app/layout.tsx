@@ -1,5 +1,8 @@
 import type { Metadata } from "next";
 import { Noto_Sans_KR, Noto_Serif_KR } from "next/font/google";
+import "./globals.css";
+import { ToastContainer } from "react-toastify";
+import "react-toastify/dist/ReactToastify.css";
 import "@/styles/globals.css";
 import TopLoadingBar from "@/components/layout/TopLoadingBar";
 import { BookProvider } from "@/context/bookContext";
@@ -30,6 +33,19 @@ export default function RootLayout({
   return (
     <html lang="en" className={`${notoSansKR.variable} ${notoSerifKR.variable}`}>
       <body className="min-h-screen flex items-center justify-center overflow-hidden relative bg-gradient-to-br from-[#0a0a1a] via-[#1a1a3e] to-[#2a2a5e]" style={{ fontFamily: "'Diphylleia', serif" }}>
+        {children}
+        <ToastContainer
+          position="top-right"
+          autoClose={3000}
+          hideProgressBar={false}
+          newestOnTop={false}
+          closeOnClick
+          rtl={false}
+          pauseOnFocusLoss
+          draggable
+          pauseOnHover
+          theme="light"
+        />
         <TopLoadingBar />
         {children}
         <BookProvider>
