@@ -70,11 +70,7 @@ export default function Book() {
                             z-[1]
                         "
                     >
-                        {pageContent.left || (
-                            <div className="flex flex-1 items-center justify-center">
-                                <PaperIcon />
-                            </div>
-                        )}
+                        {pageContent.left}
                     </div>
 
                     <div
@@ -121,15 +117,5 @@ export default function Book() {
                 <Navigation />
             </div>
         </div>
-    );
-}
-
-function PaperIcon() {
-    return (
-        <svg className="h-[15rem] w-[15rem] opacity-30" viewBox="0 0 200 200">
-            <path d="M 50 150 Q 80 100 100 80 Q 120 60 150 50" stroke="#BA3C3C" strokeWidth="3" fill="none" strokeLinecap="round" />
-            <path d="M 100 80 L 160 140" stroke="#BA3C3C" strokeWidth="8" fill="none" strokeLinecap="round" />
-            <path d="M 160 140 L 140 150" stroke="#BA3C3C" strokeWidth="8" fill="none" strokeLinecap="round" />
-        </svg>
     );
 }
