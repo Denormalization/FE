@@ -59,7 +59,7 @@ export default function ReadFull() {
             className={`w-full h-full ${themeBg} flex flex-col overflow-hidden relative transition-colors`}
             onDoubleClick={handleDoubleClick}
         >
-            <ReadFullHeader title={READ_FULL_CONSTANTS.TITLE} />
+            <ReadFullHeader title={READ_FULL_CONSTANTS.TITLE} showBars={showBars} theme={viewerSettings.theme} />
             <ReadFullContent content={POEM_TEXT} viewerSettings={viewerSettings} />
             <ReadFullFooter
                 currentPage={READ_FULL_CONSTANTS.CURRENT_PAGE}
@@ -67,6 +67,8 @@ export default function ReadFull() {
                 onPageChange={handlePageChange}
                 onSettingsClick={handleSettingsClick}
                 onFullscreenClick={handleFullscreenClick}
+                showBars={showBars}
+                theme={viewerSettings.theme}
             />
 
             {/* 뷰어 설정 패널 */}
