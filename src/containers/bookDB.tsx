@@ -2,7 +2,7 @@
 
 import React, { useEffect, useRef, useState } from 'react';
 import * as d3 from 'd3';
-import Book from '@/components/book';
+import Book from '@/components/ui/book';
 import { KNOWLEDGE_GRAPH_DATA, GraphNode, GraphLink } from '@/mock/graph';
 
 export default function BookDB() {

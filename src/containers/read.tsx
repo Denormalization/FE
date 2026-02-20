@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
-import Book from '../components/book';
+import Book from '../components/ui/book';
 import { POEM_TEXT } from '@/mock/read';
 
 export default function Read() {

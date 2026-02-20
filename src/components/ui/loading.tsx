@@ -4,9 +4,10 @@ import { useState, useEffect } from 'react';
 
 interface ElegantAirplaneLoadingProps {
     className?: string;
+    size?: 'sm' | 'md' | 'lg';
 }
 
-export default function ElegantAirplaneLoading({ className = '' }: ElegantAirplaneLoadingProps) {
+export default function ElegantAirplaneLoading({ className = '', size = 'md' }: ElegantAirplaneLoadingProps) {
     const [progress, setProgress] = useState(0);
     const [opacity, setOpacity] = useState(0);
 
@@ -73,27 +74,15 @@ export default function ElegantAirplaneLoading({ className = '' }: ElegantAirpla
         return 0.2 + (0.8 * (currentLength - accumulatedLength)) / pathLengths[pathIndex];
     };
 
-    const getPenPosition = () => {
-        const pathLengths = [800, 600, 500];
-        const totalLength = pathLengths.reduce((a, b) => a + b, 0);
-        const currentLength = (totalLength * progress) / 100;
-        
-        if (currentLength <= 800) {
-            return { top: `${80 - (currentLength / 800) * 30}%`, left: `${50 + (currentLength / 800) * 20}%` };
-        } else if (currentLength <= 1400) {
-            const secondProgress = (currentLength - 800) / 600;
-            return { top: `${50 - secondProgress * 30}%`, left: '50%' };
-        } else {
-            const thirdProgress = (currentLength - 1400) / 500;
-            return { top: `${20 - thirdProgress * 20}%`, left: `${50 - thirdProgress * 30}%` };
-        }
+    const sizeClasses = {
+        sm: 'w-16 h-16',
+        md: 'w-24 h-24',
+        lg: 'w-32 h-32'
     };
-
-    const penPosition = getPenPosition();
 
     return (
         <div className={`flex items-center justify-center ${className}`}>
-            <div className="relative w-32 h-32">
+            <div className={`relative ${sizeClasses[size]}`}>
                 <svg
                     width="100%"
                     height="100%"
@@ -158,18 +147,6 @@ export default function ElegantAirplaneLoading({ className = '' }: ElegantAirpla
                 </svg>
 
                 <div 
-                    className="absolute w-2 h-2 bg-red-500 rounded-full"
-                    style={{
-                        left: penPosition.left,
-                        top: penPosition.top,
-                        transform: 'translate(-50%, -50%)',
-                        boxShadow: '0 0 12px rgba(186, 60, 60, 0.8)',
-                        opacity: progress > 0 && progress < 100 ? 1 : 0,
-                        transition: 'all 0.2s ease-out'
-                    }}
-                />
-
-                <div 
                     className="absolute inset-0 rounded-full"
                     style={{
                         background: `radial-gradient(circle, rgba(186, 60, 60, ${0.1 * opacity}) 0%, transparent 60%)`,
@@ -177,6 +154,15 @@ export default function ElegantAirplaneLoading({ className = '' }: ElegantAirpla
                     }}
                 />
             </div>
+            
+            {/* 로딩 텍스트 */}
+            {progress > 0 && (
+                <div className="absolute -bottom-8 left-1/2 transform -translate-x-1/2">
+                    <span className="text-xs text-gray-400 font-medium">
+                        Loading... {Math.round(progress)}%
+                    </span>
+                </div>
+            )}
         </div>
     );
 }

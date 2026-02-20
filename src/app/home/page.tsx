@@ -1,7 +1,7 @@
 'use client';
 
 import { useState } from 'react';
-import Book from '@/components/book';
+import Book from '@/components/ui/book';
 import { LeftHomeContent, RightHomeContent } from '@/containers/home';
 import { BOOKS } from '@/mock/home';
 

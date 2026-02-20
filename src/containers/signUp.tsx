@@ -3,7 +3,7 @@
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
-import Book from '../components/book';
+import Book from '../components/ui/book';
 
 export default function SignUp() {
     const router = useRouter();

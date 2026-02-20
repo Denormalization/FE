@@ -1,11 +1,11 @@
 'use client';
 
 import { useState, useRef, useEffect } from 'react';
-import ReadFullHeader from '@/components/readFullHeader';
-import ReadFullContent from '@/components/readFullContent';
-import ReadFullFooter from '@/components/readFullFooter';
-import ViewerSettingsPanel from '@/components/viewerSettingsPanel';
-import type { ViewerSettings } from '@/components/viewerSettingsPanel';
+import ReadFullHeader from '@/components/ui/readFullHeader';
+import ReadFullContent from '@/components/ui/readFullContent';
+import ReadFullFooter from '@/components/ui/readFullFooter';
+import ViewerSettingsPanel from '@/components/ui/viewerSettingsPanel';
+import type { ViewerSettings } from '@/components/ui/viewerSettingsPanel';
 import { READ_FULL_CONSTANTS } from '@/constants/readFull';
 import { VIEWER_DEFAULTS } from '@/constants/viewerSettings';
 import { VIEWER_THEMES } from '@/constants/viewerSettings';
@@ -13,6 +13,7 @@ import { POEM_TEXT } from '@/mock/read';
 
 export default function ReadFull() {
     const [showSettings, setShowSettings] = useState(false);
+    const [showBars, setShowBars] = useState(true);
     const [viewerSettings, setViewerSettings] = useState<ViewerSettings>({
         ...VIEWER_DEFAULTS,
     });
@@ -46,11 +47,18 @@ export default function ReadFull() {
         }
     };
 
+    const handleDoubleClick = () => {
+        setShowBars((prev) => !prev);
+    };
+
     const themeData = VIEWER_THEMES.find((t) => t.id === viewerSettings.theme);
     const themeBg = themeData?.bg ?? 'bg-white';
 
     return (
-        <div className={`w-full h-full ${themeBg} flex flex-col overflow-hidden relative transition-colors`}>
+        <div 
+            className={`w-full h-full ${themeBg} flex flex-col overflow-hidden relative transition-colors`}
+            onDoubleClick={handleDoubleClick}
+        >
             <ReadFullHeader title={READ_FULL_CONSTANTS.TITLE} />
             <ReadFullContent content={POEM_TEXT} viewerSettings={viewerSettings} />
             <ReadFullFooter
