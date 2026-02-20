@@ -2,7 +2,7 @@
 
 import React from 'react';
 import { usePathname } from 'next/navigation';
-import Book from '@/components/book';
+import Book from '@/components/ui/book';
 
 export default function BookShell({ children }: { children: React.ReactNode }) {
     const pathname = usePathname();

@@ -1,12 +1,11 @@
 import type { Metadata } from "next";
 import { Noto_Sans_KR, Noto_Serif_KR } from "next/font/google";
-import "./globals.css";
 import { ToastContainer } from "react-toastify";
 import "react-toastify/dist/ReactToastify.css";
 import "@/styles/globals.css";
 import TopLoadingBar from "@/components/layout/TopLoadingBar";
 import { BookProvider } from "@/context/bookContext";
-import BookShell from "@/components/bookShell";
+import BookShell from "@/components/layout/bookShell";
 
 const notoSansKR = Noto_Sans_KR({
   subsets: ["latin"],
@@ -27,32 +26,31 @@ export const metadata: Metadata = {
 
 export default function RootLayout({
   children,
-}: Readonly<{
+}: {
   children: React.ReactNode;
-}>) {
+}) {
   return (
-    <html lang="en" className={`${notoSansKR.variable} ${notoSerifKR.variable}`}>
-      <body className="min-h-screen flex items-center justify-center overflow-hidden relative bg-gradient-to-br from-[#0a0a1a] via-[#1a1a3e] to-[#2a2a5e]" style={{ fontFamily: "'Diphylleia', serif" }}>
-        {children}
-        <ToastContainer
-          position="top-right"
-          autoClose={3000}
-          hideProgressBar={false}
-          newestOnTop={false}
-          closeOnClick
-          rtl={false}
-          pauseOnFocusLoss
-          draggable
-          pauseOnHover
-          theme="light"
-        />
-        <TopLoadingBar />
-        {children}
+    <html
+      lang="en"
+      className={`${notoSansKR.variable} ${notoSerifKR.variable}`}
+    >
+      <body
+        className="min-h-screen flex items-center justify-center overflow-hidden relative bg-gradient-to-br from-[#0a0a1a] via-[#1a1a3e] to-[#2a2a5e]"
+        style={{ fontFamily: "'Diphylleia', serif" }}
+      >
         <BookProvider>
           <BookShell>
             {children}
           </BookShell>
         </BookProvider>
+
+        <ToastContainer
+          position="top-right"
+          autoClose={3000}
+          theme="light"
+        />
+
+        <TopLoadingBar />
       </body>
     </html>
   );
