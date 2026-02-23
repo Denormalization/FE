@@ -4,24 +4,41 @@ import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import Book from '../components/book';
+import { signUp } from '@/lib/auth';
 
 export default function SignUp() {
     const router = useRouter();
     const [email, setEmail] = useState('');
     const [password, setPassword] = useState('');
     const [confirmPassword, setConfirmPassword] = useState('');
+    const [nickname, setNickname] = useState('');
     const [showPassword, setShowPassword] = useState(false);
+    const [isSubmitting, setIsSubmitting] = useState(false);
+    const [errorMessage, setErrorMessage] = useState('');
 
-    const handleSignUp = (e: React.FormEvent) => {
+    const handleSignUp = async (e: React.FormEvent) => {
         e.preventDefault();
+        setErrorMessage('');
 
         if (password !== confirmPassword) {
-            alert('비밀번호가 일치하지 않습니다');
+            setErrorMessage('비밀번호가 일치하지 않습니다.');
             return;
         }
 
-        console.log('Signup:', { email, password });
-        router.push('/');
+        if (!email.trim() || !password.trim() || !nickname.trim()) {
+            setErrorMessage('이메일, 비밀번호, 닉네임을 모두 입력해 주세요.');
+            return;
+        }
+
+        setIsSubmitting(true);
+        try {
+            await signUp({ email: email.trim(), password, nickname: nickname.trim() });
+            router.push('/?signedup=1');
+        } catch (err) {
+            setErrorMessage(err instanceof Error ? err.message : '회원가입에 실패했습니다.');
+        } finally {
+            setIsSubmitting(false);
+        }
     };
 
     const airplaneIcon = (
@@ -41,6 +58,11 @@ export default function SignUp() {
             <h1 className="text-3xl font-bold mb-12 text-[#333]">회원가입</h1>
 
             <form className="flex w-[30rem] flex-col gap-5" onSubmit={handleSignUp}>
+                {errorMessage && (
+                    <p className="text-sm text-red-500" role="alert">
+                        {errorMessage}
+                    </p>
+                )}
 
                 <input
                     type="email"
@@ -48,6 +70,16 @@ export default function SignUp() {
                     value={email}
                     onChange={(e) => setEmail(e.target.value)}
                     className="w-full rounded-lg border border-[#e0e0e0] bg-white px-5 py-4 text-base text-[#333] outline-none transition focus:border-[#e57373]"
+                    autoComplete="email"
+                />
+
+                <input
+                    type="text"
+                    placeholder="닉네임"
+                    value={nickname}
+                    onChange={(e) => setNickname(e.target.value)}
+                    className="w-full rounded-lg border border-[#e0e0e0] bg-white px-5 py-4 text-base text-[#333] outline-none transition focus:border-[#e57373]"
+                    autoComplete="username"
                 />
 
                 <div className="relative">
@@ -86,9 +118,10 @@ export default function SignUp() {
 
                 <button
                     type="submit"
-                    className="mt-2 w-full cursor-pointer rounded-lg bg-gradient-to-br from-[#e57373] to-[#d65d5d] py-4 text-lg font-semibold text-white shadow-md transition hover:-translate-y-0.5 hover:shadow-lg"
+                    disabled={isSubmitting}
+                    className="mt-2 w-full cursor-pointer rounded-lg bg-gradient-to-br from-[#e57373] to-[#d65d5d] py-4 text-lg font-semibold text-white shadow-md transition hover:-translate-y-0.5 hover:shadow-lg disabled:opacity-60 disabled:cursor-not-allowed disabled:hover:translate-y-0"
                 >
-                    회원가입하기
+                    {isSubmitting ? '가입 중...' : '회원가입하기'}
                 </button>
 
                 <div className="flex items-center justify-center gap-4">
