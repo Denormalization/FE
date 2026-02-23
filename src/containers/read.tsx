@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState, useMemo } from 'react';
+import { useEffect, useState, useMemo, useRef } from 'react';
 import { useRouter } from 'next/navigation';
 import { useBook } from '@/context/bookContext';
 import { POEM_TEXT } from '@/mock/read';
@@ -9,13 +9,14 @@ import EyeTrack from '@/components/layout/eyeTrack';
 const PageContent = ({
     text,
     delay = 0,
-    activeId
+    idPrefix
 }: {
     text: string;
     delay?: number;
-    activeId: string | null
+    idPrefix: string;
 }) => {
     const [visible, setVisible] = useState(false);
+    const { activeGazeId } = useBook();
 
     const sentences = useMemo(() => {
         return text.split(/(?<=[.!?])\s+|(?<=\n)/).filter(s => s.trim().length > 0);
@@ -26,38 +27,36 @@ const PageContent = ({
             setVisible(true);
         }, delay);
         return () => clearTimeout(t);
-    }, [delay]);
-
-    const pageStyle = {
-        clipPath: visible ? 'inset(0 0 0 0)' : 'inset(0 0 100% 0)',
-        transition: 'clip-path 2s ease-out, opacity 1s ease-out, transform 1.5s ease-out',
-        maskImage: visible ? 'none' : 'linear-gradient(to bottom, black 70%, transparent 100%)',
-        WebkitMaskImage: visible ? 'none' : 'linear-gradient(to bottom, black 70%, transparent 100%)',
-    };
+    }, [delay, text]);
 
     return (
-        <div className="flex h-full w-full overflow-hidden px-24 py-[3rem]">
+        <div className="flex h-full w-full px-24 py-[3rem]">
             <div
                 className={`
                     text-gray-700 text-xl leading-[2.5] text-justify
                     transition-all duration-[2000ms] ease-out
-                    ${visible ? 'opacity-100 translate-y-0' : 'opacity-0 -translate-y-10'}
+                    ${visible
+                        ? 'opacity-100 translate-y-0 [clip-path:inset(0_0_0_0)]'
+                        : 'opacity-0 -translate-y-10 [clip-path:inset(0_0_100%_0)] [mask-image:linear-gradient(to_bottom,black_70%,transparent_100%)]'}
                 `}
-                style={pageStyle}
             >
                 {sentences.map((sentence, idx) => {
-                    const sentenceId = `sentence-${idx}`;
-                    const isActive = activeId === sentenceId;
+                    const sentenceId = `${idPrefix}-sentence-${idx}`;
+                    const isActive = activeGazeId === sentenceId;
 
                     return (
                         <span
                             key={idx}
                             id={sentenceId}
+                            style={{
+                                WebkitBoxDecorationBreak: 'clone',
+                                boxDecorationBreak: 'clone',
+                            } as any}
                             className={`
-                                transition-all duration-300 rounded-md px-1.5 py-0.5
+                                transition-all duration-500 rounded-md px-1.5 py-0.5 mx-0.5
                                 ${isActive
-                                    ? 'bg-yellow-100 text-yellow-900 font-medium scale-[1.02] shadow-[0_0_15px_-3px_rgba(250,204,21,0.5)]'
-                                    : 'hover:bg-gray-50'
+                                    ? 'bg-amber-300/90 text-amber-950 font-bold shadow-[0_2px_15px_rgba(251,191,36,0.5)] z-10'
+                                    : 'text-gray-500 font-medium'
                                 }
                             `}
                         >
@@ -72,19 +71,68 @@ const PageContent = ({
 
 export default function Read() {
     const router = useRouter();
-    const { setBookContent } = useBook();
-    const [activeGazeId, setActiveGazeId] = useState<string | null>(null);
+    const { setBookContent, setActiveGazeId } = useBook();
+    const [currentPage, setCurrentPage] = useState(0);
+    const isFlippingRef = useRef(false);
+    const stickyIdRef = useRef<string | null>(null);
+    const stickyTimeoutRef = useRef<any>(null);
+
+    const pages = useMemo(() => {
+        const allSentences = POEM_TEXT.split(/(?<=[.!?])\s+|(?<=\n)/).filter(s => s.trim().length > 0);
+        const pageSize = 12;
+        const result = [];
+        for (let i = 0; i < allSentences.length; i += pageSize) {
+            result.push(allSentences.slice(i, i + pageSize).join(' '));
+        }
+        return result;
+    }, []);
 
     useEffect(() => {
+        const leftPage = pages[currentPage] || '';
+        const rightPage = pages[currentPage + 1] || '';
+
         setBookContent(
-            <PageContent text={POEM_TEXT} activeId={activeGazeId} />,
-            <PageContent text={POEM_TEXT} delay={1200} activeId={activeGazeId} />
+            <PageContent text={leftPage} idPrefix="left" />,
+            <PageContent text={rightPage} delay={1200} idPrefix="right" />
         );
-    }, [setBookContent, activeGazeId]);
+    }, [setBookContent, currentPage, pages]);
+
+    const handleGazeUpdate = (id: string | null) => {
+        if (id) {
+            if (stickyTimeoutRef.current) clearTimeout(stickyTimeoutRef.current);
+            stickyIdRef.current = id;
+            setActiveGazeId(id);
+        } else {
+            if (!stickyTimeoutRef.current) {
+                stickyTimeoutRef.current = setTimeout(() => {
+                    setActiveGazeId(null);
+                    stickyIdRef.current = null;
+                    stickyTimeoutRef.current = null;
+                }, 150);
+            }
+        }
+
+        if (id && id.startsWith('right-sentence-') && !isFlippingRef.current) {
+            const parts = id.split('-');
+            const sentenceIdx = parseInt(parts[parts.length - 1] || '0');
+            const rightPageSentences = (pages[currentPage + 1] || '').split(/(?<=[.!?])\s+|(?<=\n)/).filter(s => s.trim().length > 0);
+
+            if (sentenceIdx === rightPageSentences.length - 1) {
+                if (currentPage + 2 < pages.length) {
+                    isFlippingRef.current = true;
+                    setTimeout(() => {
+                        setCurrentPage(prev => prev + 2);
+                        setActiveGazeId(null);
+                        isFlippingRef.current = false;
+                    }, 1500);
+                }
+            }
+        }
+    };
 
     return (
         <div className="absolute inset-0 pointer-events-none">
-            <EyeTrack onGazeUpdate={(id) => setActiveGazeId(id)} />
+            <EyeTrack onGazeUpdate={handleGazeUpdate} />
 
             <div className="relative w-[80rem] h-[50rem]">
                 <div className="absolute -right-6 bottom-0 flex flex-col gap-2 pointer-events-auto">
