@@ -6,7 +6,6 @@ interface ContentState {
     leftContent: ReactNode;
     rightContent: ReactNode;
 }
-
 interface BookContextType {
     leftContent: ReactNode;
     rightContent: ReactNode;
@@ -67,7 +66,7 @@ export function BookProvider({ children }: { children: ReactNode }) {
         activeGazeId,
         setActiveGazeId,
         prevContent
-    }), [content, overlayContent, flipKey, setBookContent, updateBookContent, setOverlayContentStable, triggerFlip, prevContent]);
+    }), [content, overlayContent, flipKey, setBookContent, updateBookContent, setOverlayContentStable, triggerFlip, activeGazeId, prevContent]);
 
     return (
         <BookContext.Provider value={value}>
