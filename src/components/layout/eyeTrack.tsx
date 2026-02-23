@@ -173,14 +173,10 @@ export default function EyeTrack({ onGazeUpdate }: EyeTrackProps) {
                         return null;
                     };
 
-                    const foundId = getSentenceFromPoint(
-                        avgX,
-                        avgY
-                    );
+                    const foundId = getSentenceFromPoint(avgX, avgY);
 
                     if (foundId !== lastElementIdRef.current) {
                         lastElementIdRef.current = foundId;
-
                         onGazeUpdate?.(foundId);
                     }
                 }).begin();
@@ -219,6 +215,7 @@ export default function EyeTrack({ onGazeUpdate }: EyeTrackProps) {
                 script.src = SCRIPT_URL;
                 script.async = true;
                 script.onload = initWebGazer;
+                script.onerror = () => { };
 
                 document.body.appendChild(script);
             }
@@ -230,8 +227,30 @@ export default function EyeTrack({ onGazeUpdate }: EyeTrackProps) {
                     window.webgazer.pause();
                     window.webgazer.end();
 
-                    (window as any).webgazerInitialized =
-                        false;
+                    (window as any).webgazerInitialized = false;
+
+                    const video = document.getElementById(
+                        'webgazerVideoFeed'
+                    ) as HTMLVideoElement;
+
+                    if (video && video.srcObject) {
+                        const stream =
+                            video.srcObject as MediaStream;
+                        stream
+                            .getTracks()
+                            .forEach((track) => track.stop());
+                    }
+
+                    [
+                        'webgazerVideoContainer',
+                        'webgazerVideoFeed',
+                        'webgazerFaceOverlay',
+                        'webgazerFaceFeedbackBox'
+                    ].forEach((id) => {
+                        const el =
+                            document.getElementById(id);
+                        if (el) el.remove();
+                    });
                 } catch (e) {
                     console.error(
                         'WebGazer cleanup error:',
