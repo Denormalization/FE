@@ -8,10 +8,14 @@ export default function EyeTrack({ onGazeUpdate }: EyeTrackProps) {
     const lastElementIdRef = useRef<string | null>(null);
     const initializedRef = useRef(false);
     const gazeBufferRef = useRef<{ x: number; y: number }[]>([]);
+<<<<<<< HEAD
     const lastPointRef = useRef<{ x: number; y: number; t: number } | null>(null);
     const isFixatingRef = useRef(false);
 
     const MAX_BUFFER_SIZE = 30;
+=======
+    const BUFFER_SIZE = 12;
+>>>>>>> 4063c94 (feat/#13 :: 로그인, 회원가입 api 구현 완료)
 
     useEffect(() => {
         if (initializedRef.current) return;
@@ -35,6 +39,7 @@ export default function EyeTrack({ onGazeUpdate }: EyeTrackProps) {
                 window.webgazer.setGazeListener((data: any) => {
                     if (!data) return;
 
+<<<<<<< HEAD
                     const now = Date.now();
                     let velocity = 0;
 
@@ -167,6 +172,46 @@ export default function EyeTrack({ onGazeUpdate }: EyeTrackProps) {
 
                                 current =
                                     current.parentElement;
+=======
+                    const lastAvg = gazeBufferRef.current.length > 0
+                        ? {
+                            x: gazeBufferRef.current.reduce((s, p) => s + p.x, 0) / gazeBufferRef.current.length,
+                            y: gazeBufferRef.current.reduce((s, p) => s + p.y, 0) / gazeBufferRef.current.length
+                        }
+                        : { x: data.x, y: data.y };
+
+                    const dist = Math.sqrt(Math.pow(data.x - lastAvg.x, 2) + Math.pow(data.y - lastAvg.y, 2));
+
+                    // Outlier rejection: if jump is too big, don't jump fully, just nudge
+                    let targetX = data.x;
+                    let targetY = data.y;
+                    if (gazeBufferRef.current.length > 5 && dist > 400) {
+                        targetX = lastAvg.x + (data.x - lastAvg.x) * 0.2;
+                        targetY = lastAvg.y + (data.y - lastAvg.y) * 0.2;
+                    }
+
+                    gazeBufferRef.current.push({ x: targetX, y: targetY });
+                    if (gazeBufferRef.current.length > BUFFER_SIZE) {
+                        gazeBufferRef.current.shift();
+                    }
+
+                    // Weighted Moving Average: more recent points have higher impact
+                    const totalWeight = gazeBufferRef.current.reduce((s, _, i) => s + (i + 1), 0);
+                    const avgX = gazeBufferRef.current.reduce((s, p, i) => s + p.x * (i + 1), 0) / totalWeight;
+                    const avgY = gazeBufferRef.current.reduce((s, p, i) => s + p.y * (i + 1), 0) / totalWeight;
+
+                    setDotPos({ x: avgX, y: avgY });
+
+                    const element = document.elementFromPoint(avgX, avgY);
+                    if (element) {
+                        let current: HTMLElement | null = element as HTMLElement;
+                        let foundId: string | null = null;
+
+                        while (current && current !== document.body) {
+                            if (current.id && current.id.includes('sentence-')) {
+                                foundId = current.id;
+                                break;
+>>>>>>> 4063c94 (feat/#13 :: 로그인, 회원가입 api 구현 완료)
                             }
                         }
 
@@ -199,6 +244,7 @@ export default function EyeTrack({ onGazeUpdate }: EyeTrackProps) {
         if (window.webgazer) {
             initWebGazer();
         } else {
+<<<<<<< HEAD
             const existingScript = document.querySelector(
                 `script[src="${SCRIPT_URL}"]`
             );
@@ -212,11 +258,21 @@ export default function EyeTrack({ onGazeUpdate }: EyeTrackProps) {
                 const script =
                     document.createElement('script');
 
+=======
+            const existingScript = document.querySelector(`script[src="${SCRIPT_URL}"]`);
+            if (existingScript) {
+                existingScript.addEventListener('load', initWebGazer);
+            } else {
+                const script = document.createElement('script');
+>>>>>>> 4063c94 (feat/#13 :: 로그인, 회원가입 api 구현 완료)
                 script.src = SCRIPT_URL;
                 script.async = true;
                 script.onload = initWebGazer;
                 script.onerror = () => { };
+<<<<<<< HEAD
 
+=======
+>>>>>>> 4063c94 (feat/#13 :: 로그인, 회원가입 api 구현 완료)
                 document.body.appendChild(script);
             }
         }
@@ -226,6 +282,7 @@ export default function EyeTrack({ onGazeUpdate }: EyeTrackProps) {
                 try {
                     window.webgazer.pause();
                     window.webgazer.end();
+<<<<<<< HEAD
 
                     (window as any).webgazerInitialized = false;
 
@@ -256,6 +313,23 @@ export default function EyeTrack({ onGazeUpdate }: EyeTrackProps) {
                         'WebGazer cleanup error:',
                         e
                     );
+=======
+                    (window as any).webgazerInitialized = false;
+
+                    const video = document.getElementById('webgazerVideoFeed') as HTMLVideoElement;
+                    if (video && video.srcObject) {
+                        const stream = video.srcObject as MediaStream;
+                        stream.getTracks().forEach(track => track.stop());
+                    }
+
+                    ['webgazerVideoContainer', 'webgazerVideoFeed', 'webgazerFaceOverlay', 'webgazerFaceFeedbackBox']
+                        .forEach(id => {
+                            const el = document.getElementById(id);
+                            if (el) el.remove();
+                        });
+                } catch (e) {
+                    console.error('WebGazer cleanup error:', e);
+>>>>>>> 4063c94 (feat/#13 :: 로그인, 회원가입 api 구현 완료)
                 }
             }
         };
