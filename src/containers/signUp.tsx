@@ -1,32 +1,49 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo, useRef } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
+import { toast } from 'react-toastify';
 import Book from '../components/ui/book';
 import { useBook } from '@/context/bookContext';
+import { signUp } from '@/lib/auth';
 
 export default function SignUp() {
     const router = useRouter();
-    const { setBookContent } = useBook();
+    const { setBookContent, updateBookContent } = useBook();
+    const isInitialMount = useRef(true);
     const [email, setEmail] = useState('');
     const [password, setPassword] = useState('');
     const [confirmPassword, setConfirmPassword] = useState('');
+    const [nickname, setNickname] = useState('');
     const [showPassword, setShowPassword] = useState(false);
+    const [isSubmitting, setIsSubmitting] = useState(false);
 
-    const handleSignUp = (e: React.FormEvent) => {
+    const handleSignUp = async (e: React.FormEvent) => {
         e.preventDefault();
 
         if (password !== confirmPassword) {
-            alert('비밀번호가 일치하지 않습니다');
+            toast.error('비밀번호가 일치하지 않습니다.');
             return;
         }
 
-        console.log('Signup:', { email, password });
-        router.push('/');
+        if (!email.trim() || !password.trim() || !nickname.trim()) {
+            toast.error('이메일, 비밀번호, 닉네임을 모두 입력해 주세요.');
+            return;
+        }
+
+        setIsSubmitting(true);
+        try {
+            await signUp({ email: email.trim(), password, nickname: nickname.trim() });
+            router.push('/?signedup=1');
+        } catch (err) {
+            toast.error(err instanceof Error ? err.message : '회원가입에 실패했습니다.');
+        } finally {
+            setIsSubmitting(false);
+        }
     };
 
-    const airplaneIcon = (
+    const airplaneIcon = useMemo(() => (
         <div className="flex h-full items-center justify-center">
             <img src="/assets/airplane.svg" alt="비행기" className="
     w-80 h-80 opacity-80
@@ -35,10 +52,10 @@ export default function SignUp() {
 "
             />
         </div>
-    );
+    ), []);
 
 
-    const loginContent = (
+    const signUpContent = useMemo(() => (
         <div className="flex flex-col items-center mt-22">
             <h1 className="text-3xl font-bold mb-12 text-[#333]">회원가입</h1>
 
@@ -50,6 +67,16 @@ export default function SignUp() {
                     value={email}
                     onChange={(e) => setEmail(e.target.value)}
                     className="w-full rounded-lg border border-[#e0e0e0] bg-white px-5 py-4 text-base text-[#333] outline-none transition focus:border-[#e57373]"
+                    autoComplete="email"
+                />
+
+                <input
+                    type="text"
+                    placeholder="닉네임"
+                    value={nickname}
+                    onChange={(e) => setNickname(e.target.value)}
+                    className="w-full rounded-lg border border-[#e0e0e0] bg-white px-5 py-4 text-base text-[#333] outline-none transition focus:border-[#e57373]"
+                    autoComplete="username"
                 />
 
                 <div className="relative">
@@ -88,9 +115,18 @@ export default function SignUp() {
 
                 <button
                     type="submit"
-                    className="mt-2 w-full cursor-pointer rounded-lg bg-gradient-to-br from-[#e57373] to-[#d65d5d] py-4 text-lg font-semibold text-white shadow-md transition hover:-translate-y-0.5 hover:shadow-lg"
+                    disabled={isSubmitting}
+                    className="mt-2 w-full h-[58px] cursor-pointer rounded-lg bg-gradient-to-br from-[#e57373] to-[#d65d5d] text-lg font-semibold text-white shadow-md transition hover:-translate-y-0.5 hover:shadow-lg disabled:opacity-60 disabled:cursor-not-allowed disabled:hover:translate-y-0"
                 >
-                    회원가입하기
+                    {isSubmitting ? (
+                        <div className="flex items-center justify-center gap-2">
+                            <svg className="animate-spin h-5 w-5 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                                <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
+                                <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" />
+                            </svg>
+                            <span>가입 중...</span>
+                        </div>
+                    ) : '회원가입하기'}
                 </button>
 
                 <div className="flex items-center justify-center gap-4">
@@ -126,11 +162,16 @@ export default function SignUp() {
                 </div>
             </form>
         </div>
-    );
+    ), [email, nickname, password, confirmPassword, showPassword, isSubmitting]);
 
     useEffect(() => {
-        setBookContent(airplaneIcon, loginContent);
-    }, []);
+        if (isInitialMount.current) {
+            setBookContent(airplaneIcon, signUpContent);
+            isInitialMount.current = false;
+        } else {
+            updateBookContent(airplaneIcon, signUpContent);
+        }
+    }, [setBookContent, updateBookContent, airplaneIcon, signUpContent]);
 
     return null;
 }

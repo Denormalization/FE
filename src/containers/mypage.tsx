@@ -92,9 +92,19 @@ export function LeftHomeContent({
     );
 }
 
-export function RightHomeContent({ books }: { books: BookData[] }) {
+export function RightHomeContent({ books, onLogout }: { books: BookData[]; onLogout?: () => void }) {
     return (
         <div className="flex h-full w-full flex-col px-24 py-[4.5rem]">
+            {onLogout && (
+                <div className="flex justify-end mb-4 -mt-8">
+                    <button
+                        onClick={onLogout}
+                        className="text-sm text-gray-400 hover:text-[#e57373] transition cursor-pointer"
+                    >
+                        로그아웃
+                    </button>
+                </div>
+            )}
             <div className="grid grid-cols-2 gap-x-20 gap-y-6">
                 {books.map(book => (
                     <BookCard key={book.id} book={book} />
