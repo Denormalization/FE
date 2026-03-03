@@ -3,6 +3,7 @@
 import { useState, useEffect, useMemo, useRef } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
+import { toast } from 'react-toastify';
 import Book from '../components/ui/book';
 import { useBook } from '@/context/bookContext';
 import { signUp } from '@/lib/auth';
@@ -17,19 +18,17 @@ export default function SignUp() {
     const [nickname, setNickname] = useState('');
     const [showPassword, setShowPassword] = useState(false);
     const [isSubmitting, setIsSubmitting] = useState(false);
-    const [errorMessage, setErrorMessage] = useState('');
 
     const handleSignUp = async (e: React.FormEvent) => {
         e.preventDefault();
-        setErrorMessage('');
 
         if (password !== confirmPassword) {
-            setErrorMessage('비밀번호가 일치하지 않습니다.');
+            toast.error('비밀번호가 일치하지 않습니다.');
             return;
         }
 
         if (!email.trim() || !password.trim() || !nickname.trim()) {
-            setErrorMessage('이메일, 비밀번호, 닉네임을 모두 입력해 주세요.');
+            toast.error('이메일, 비밀번호, 닉네임을 모두 입력해 주세요.');
             return;
         }
 
@@ -38,7 +37,7 @@ export default function SignUp() {
             await signUp({ email: email.trim(), password, nickname: nickname.trim() });
             router.push('/?signedup=1');
         } catch (err) {
-            setErrorMessage(err instanceof Error ? err.message : '회원가입에 실패했습니다.');
+            toast.error(err instanceof Error ? err.message : '회원가입에 실패했습니다.');
         } finally {
             setIsSubmitting(false);
         }
@@ -61,11 +60,6 @@ export default function SignUp() {
             <h1 className="text-3xl font-bold mb-12 text-[#333]">회원가입</h1>
 
             <form className="flex w-[30rem] flex-col gap-5" onSubmit={handleSignUp}>
-                {errorMessage && (
-                    <p className="text-sm text-red-500" role="alert">
-                        {errorMessage}
-                    </p>
-                )}
 
                 <input
                     type="email"
@@ -122,9 +116,17 @@ export default function SignUp() {
                 <button
                     type="submit"
                     disabled={isSubmitting}
-                    className="mt-2 w-full cursor-pointer rounded-lg bg-gradient-to-br from-[#e57373] to-[#d65d5d] py-4 text-lg font-semibold text-white shadow-md transition hover:-translate-y-0.5 hover:shadow-lg disabled:opacity-60 disabled:cursor-not-allowed disabled:hover:translate-y-0"
+                    className="mt-2 w-full h-[58px] cursor-pointer rounded-lg bg-gradient-to-br from-[#e57373] to-[#d65d5d] text-lg font-semibold text-white shadow-md transition hover:-translate-y-0.5 hover:shadow-lg disabled:opacity-60 disabled:cursor-not-allowed disabled:hover:translate-y-0"
                 >
-                    {isSubmitting ? '가입 중...' : '회원가입하기'}
+                    {isSubmitting ? (
+                        <div className="flex items-center justify-center gap-2">
+                            <svg className="animate-spin h-5 w-5 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                                <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
+                                <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" />
+                            </svg>
+                            <span>가입 중...</span>
+                        </div>
+                    ) : '회원가입하기'}
                 </button>
 
                 <div className="flex items-center justify-center gap-4">
@@ -160,7 +162,7 @@ export default function SignUp() {
                 </div>
             </form>
         </div>
-    ), [email, nickname, password, confirmPassword, showPassword, isSubmitting, errorMessage]);
+    ), [email, nickname, password, confirmPassword, showPassword, isSubmitting]);
 
     useEffect(() => {
         if (isInitialMount.current) {

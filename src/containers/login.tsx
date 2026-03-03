@@ -3,6 +3,7 @@
 import { useState, useEffect, useMemo, useRef } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
+import { toast } from 'react-toastify';
 import Book from '../components/ui/book';
 import { useBook } from '@/context/bookContext';
 import { getOAuthRedirectUrl, login, refresh, setTokens } from '@/lib/auth';
@@ -16,7 +17,6 @@ export default function Login() {
     const [password, setPassword] = useState('');
     const [showPassword, setShowPassword] = useState(false);
     const [isSubmitting, setIsSubmitting] = useState(false);
-    const [errorMessage, setErrorMessage] = useState('');
     const [isCheckingAuth, setIsCheckingAuth] = useState(true);
 
 
@@ -36,10 +36,9 @@ export default function Login() {
 
     const handleLogin = async (e: React.FormEvent) => {
         e.preventDefault();
-        setErrorMessage('');
 
         if (!email.trim() || !password) {
-            setErrorMessage('이메일과 비밀번호를 입력해 주세요.');
+            toast.error('이메일과 비밀번호를 입력해 주세요.');
             return;
         }
 
@@ -53,7 +52,7 @@ export default function Login() {
             setTokens(accessToken, refreshToken);
             router.push('/home');
         } catch (err) {
-            setErrorMessage(
+            toast.error(
                 err instanceof Error ? err.message : '로그인에 실패했습니다.'
             );
         } finally {
@@ -66,11 +65,6 @@ export default function Login() {
             <h1 className="mb-12 text-3xl font-bold text-[#333]">로그인</h1>
 
             <form className="flex w-[30rem] flex-col gap-5" onSubmit={handleLogin}>
-                {errorMessage && (
-                    <p className="text-sm text-red-500" role="alert">
-                        {errorMessage}
-                    </p>
-                )}
 
                 <input
                     type="email"
@@ -101,9 +95,17 @@ export default function Login() {
                 <button
                     type="submit"
                     disabled={isSubmitting}
-                    className="mt-2 w-full rounded-lg bg-gradient-to-br from-[#e57373] to-[#d65d5d] py-4 text-lg font-semibold text-white shadow-md transition hover:-translate-y-0.5 hover:shadow-lg disabled:opacity-60 disabled:cursor-not-allowed disabled:hover:translate-y-0"
+                    className="mt-2 w-full h-[58px] rounded-lg bg-gradient-to-br from-[#e57373] to-[#d65d5d] text-lg font-semibold text-white shadow-md transition hover:-translate-y-0.5 hover:shadow-lg disabled:opacity-60 disabled:cursor-not-allowed disabled:hover:translate-y-0"
                 >
-                    {isSubmitting ? '로그인 중...' : '로그인하기'}
+                    {isSubmitting ? (
+                        <div className="flex items-center justify-center gap-2">
+                            <svg className="animate-spin h-5 w-5 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                                <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
+                                <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" />
+                            </svg>
+                            <span>로그인 중...</span>
+                        </div>
+                    ) : '로그인하기'}
                 </button>
 
                 <div className="flex items-center justify-center gap-4 text-sm">
@@ -152,7 +154,7 @@ export default function Login() {
                 </div>
             </form>
         </div>
-    ), [email, password, showPassword, isSubmitting, errorMessage]);
+    ), [email, password, showPassword, isSubmitting]);
 
     useEffect(() => {
         refresh()
