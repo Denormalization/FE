@@ -1,26 +1,33 @@
 'use client';
 
-import { useEffect, Suspense } from 'react';
+import { useEffect, useState, Suspense } from 'react';
 import { useSearchParams } from 'next/navigation';
+import { toast } from 'react-toastify';
 import { useBook } from '@/context/bookContext';
 import { LeftBookDetailContent, RightBookDetailContent } from '@/containers/bookDetail';
-import { BOOKS } from '@/mock/home';
+import { BookDetail, fetchBookDetail } from '@/services/books';
 
 function BookDetailContent() {
     const { setBookContent } = useBook();
     const searchParams = useSearchParams();
-    const bookId = searchParams.get('id');
+    const isbn = searchParams.get('isbn');
+    const [book, setBook] = useState<BookDetail | null>(null);
 
     useEffect(() => {
-        const book = BOOKS.find(b => b.id === Number(bookId)) || BOOKS[0];
+        if (!isbn) return;
 
-        if (book) {
-            setBookContent(
-                <LeftBookDetailContent book={book} />,
-                <RightBookDetailContent book={book} />
-            );
-        }
-    }, [bookId, setBookContent]);
+        fetchBookDetail(isbn)
+            .then((data) => {
+                setBook(data);
+                setBookContent(
+                    <LeftBookDetailContent book={data} />,
+                    <RightBookDetailContent book={data} />
+                );
+            })
+            .catch((err) => {
+                toast.error(err instanceof Error ? err.message : '책 정보를 불러오지 못했습니다.');
+            });
+    }, [isbn, setBookContent]);
 
     return null;
 }
