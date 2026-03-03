@@ -1,11 +1,13 @@
 'use client';
 
-import { useState } from 'react';
-import Book from '@/components/book';
+import Book from '@/components/ui/book';
+import { useState, useEffect } from 'react';
+import { useBook } from '@/context/bookContext';
 import { LeftHomeContent, RightHomeContent } from '@/containers/mypage';
 import { BOOKS } from '@/mock/home';
 
 export default function MyPagePage() {
+    const { setBookContent } = useBook();
     const [searchTerm, setSearchTerm] = useState('');
 
     const filteredBooks = BOOKS.filter(book =>
@@ -16,17 +18,17 @@ export default function MyPagePage() {
     const leftBooks = filteredBooks.slice(0, 4);
     const rightBooks = filteredBooks.slice(4, 8);
 
-    return (
-        <Book
-            leftContent={
-                <LeftHomeContent
-                    searchTerm={searchTerm}
-                    onSearchChange={setSearchTerm}
-                    books={leftBooks}
-                />
-            }
-            rightContent={<RightHomeContent books={rightBooks} />}
-        />
-    );
+    useEffect(() => {
+        setBookContent(
+            <LeftHomeContent
+                searchTerm={searchTerm}
+                onSearchChange={setSearchTerm}
+                books={leftBooks}
+            />,
+            <RightHomeContent books={rightBooks} />
+        );
+    }, [searchTerm]);
+
+    return null;
 }
 

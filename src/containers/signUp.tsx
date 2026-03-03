@@ -1,13 +1,16 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect, useMemo, useRef } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
-import Book from '../components/book';
+import Book from '../components/ui/book';
+import { useBook } from '@/context/bookContext';
 import { signUp } from '@/lib/auth';
 
 export default function SignUp() {
     const router = useRouter();
+    const { setBookContent, updateBookContent } = useBook();
+    const isInitialMount = useRef(true);
     const [email, setEmail] = useState('');
     const [password, setPassword] = useState('');
     const [confirmPassword, setConfirmPassword] = useState('');
@@ -41,7 +44,7 @@ export default function SignUp() {
         }
     };
 
-    const airplaneIcon = (
+    const airplaneIcon = useMemo(() => (
         <div className="flex h-full items-center justify-center">
             <img src="/assets/airplane.svg" alt="비행기" className="
     w-80 h-80 opacity-80
@@ -50,10 +53,10 @@ export default function SignUp() {
 "
             />
         </div>
-    );
+    ), []);
 
 
-    const loginContent = (
+    const signUpContent = useMemo(() => (
         <div className="flex flex-col items-center mt-22">
             <h1 className="text-3xl font-bold mb-12 text-[#333]">회원가입</h1>
 
@@ -157,7 +160,16 @@ export default function SignUp() {
                 </div>
             </form>
         </div>
-    );
+    ), [email, nickname, password, confirmPassword, showPassword, isSubmitting, errorMessage]);
 
-    return <Book leftContent={airplaneIcon} rightContent={loginContent} />;
+    useEffect(() => {
+        if (isInitialMount.current) {
+            setBookContent(airplaneIcon, signUpContent);
+            isInitialMount.current = false;
+        } else {
+            updateBookContent(airplaneIcon, signUpContent);
+        }
+    }, [setBookContent, updateBookContent, airplaneIcon, signUpContent]);
+
+    return null;
 }

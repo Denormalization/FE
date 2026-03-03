@@ -1,11 +1,11 @@
 'use client';
 
 import { useState, useRef, useEffect } from 'react';
-import ReadFullHeader from '@/components/readFullHeader';
-import ReadFullContent from '@/components/readFullContent';
-import ReadFullFooter from '@/components/readFullFooter';
-import ViewerSettingsPanel from '@/components/viewerSettingsPanel';
-import type { ViewerSettings } from '@/components/viewerSettingsPanel';
+import ReadFullHeader from '@/components/ui/readFullHeader';
+import ReadFullContent from '@/components/ui/readFullContent';
+import ReadFullFooter from '@/components/ui/readFullFooter';
+import ViewerSettingsPanel from '@/components/ui/viewerSettingsPanel';
+import type { ViewerSettings } from '@/components/ui/viewerSettingsPanel';
 import { READ_FULL_CONSTANTS } from '@/constants/readFull';
 import { VIEWER_DEFAULTS } from '@/constants/viewerSettings';
 import { VIEWER_THEMES } from '@/constants/viewerSettings';
@@ -55,8 +55,8 @@ export default function ReadFull() {
     const themeBg = themeData?.bg ?? 'bg-white';
 
     return (
-        <div 
-            className={`w-full h-full ${themeBg} flex flex-col overflow-hidden relative transition-colors`}
+        <div
+            className={`w-full h-full ${themeBg} flex flex-col overflow-hidden relative transition-colors pointer-events-auto`}
             onDoubleClick={handleDoubleClick}
         >
             <ReadFullHeader title={READ_FULL_CONSTANTS.TITLE} showBars={showBars} theme={viewerSettings.theme} />
