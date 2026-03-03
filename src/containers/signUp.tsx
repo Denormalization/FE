@@ -33,6 +33,7 @@ export default function SignUp() {
         }
 
         setIsSubmitting(true);
+
         try {
             await signUp({
                 email: email.trim(),
@@ -167,7 +168,7 @@ export default function SignUp() {
                         </span>
                         <Link
                             href="/"
-                            className="text-sm font-bold text-[#e57373] transition hover:text-[#BA3C3C]"
+                            className="text-sm font-bold text-[#e57373] hover:text-[#BA3C3C]"
                         >
                             로그인
                         </Link>
