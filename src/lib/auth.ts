@@ -165,3 +165,31 @@ export async function refresh(): Promise<RefreshResponse> {
   setTokens(data.accessToken, token);
   return data;
 }
+
+export function getAccessToken(): string | null {
+  if (typeof window === 'undefined') return null;
+  return window.localStorage.getItem(STORAGE_ACCESS);
+}
+
+export function clearTokens(): void {
+  if (typeof window === 'undefined') return;
+  window.localStorage.removeItem(STORAGE_ACCESS);
+  window.localStorage.removeItem(STORAGE_REFRESH);
+}
+
+export async function logout(): Promise<void> {
+  const accessToken = getAccessToken();
+  if (accessToken) {
+    try {
+      await fetch(`${API_URL}/api/v1/auth/logout`, {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${accessToken}`,
+        },
+      });
+    } catch {
+      // 서버 에러 무시 — 로컬 토큰은 어차피 삭제
+    }
+  }
+  clearTokens();
+}
