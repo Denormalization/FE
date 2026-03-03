@@ -3,6 +3,7 @@
 import { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
+import { toast } from 'react-toastify';
 import Book from '../components/ui/book';
 import { useBook } from '@/context/bookContext';
 
@@ -12,6 +13,8 @@ export default function Login() {
     const [email, setEmail] = useState('');
     const [password, setPassword] = useState('');
     const [showPassword, setShowPassword] = useState(false);
+    const [isSubmitting, setIsSubmitting] = useState(false);
+    const [isCheckingAuth, setIsCheckingAuth] = useState(true);
 
     const handleLogin = (e: React.FormEvent) => {
         e.preventDefault();
@@ -62,9 +65,18 @@ export default function Login() {
 
                 <button
                     type="submit"
-                    className="mt-2 w-full cursor-pointer rounded-lg bg-gradient-to-br from-[#e57373] to-[#d65d5d] py-4 text-lg font-semibold text-white shadow-md transition hover:-translate-y-0.5 hover:shadow-lg"
+                    disabled={isSubmitting}
+                    className="mt-2 w-full h-[58px] rounded-lg bg-gradient-to-br from-[#e57373] to-[#d65d5d] text-lg font-semibold text-white shadow-md transition hover:-translate-y-0.5 hover:shadow-lg disabled:opacity-60 disabled:cursor-not-allowed disabled:hover:translate-y-0"
                 >
-                    로그인하기
+                    {isSubmitting ? (
+                        <div className="flex items-center justify-center gap-2">
+                            <svg className="animate-spin h-5 w-5 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                                <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
+                                <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" />
+                            </svg>
+                            <span>로그인 중...</span>
+                        </div>
+                    ) : '로그인하기'}
                 </button>
 
                 <div className="flex items-center justify-center gap-4 text-sm">
