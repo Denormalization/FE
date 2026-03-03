@@ -2,14 +2,13 @@
 
 import { useRouter } from 'next/navigation';
 import { useBook } from '@/context/bookContext';
-import { BookData, BOOKS } from '@/mock/home';
+import { BookItem } from '@/services/books';
 
-const BookCard = ({ book }: { book: BookData }) => {
+const BookCard = ({ book }: { book: BookItem }) => {
     const router = useRouter();
-    const { triggerFlip } = useBook();
 
     const handleClick = () => {
-        router.push(`/bookDetail?id=${book.id}`);
+        router.push(`/bookDetail?isbn=${book.isbn}`);
     };
 
     return (
@@ -34,9 +33,17 @@ const BookCard = ({ book }: { book: BookData }) => {
                     group-hover:shadow-md
                 "
             >
-                <div className="px-4 text-center text-sm text-gray-500 leading-relaxed">
-                    {book.title}
-                </div>
+                {book.coverUrl ? (
+                    <img
+                        src={book.coverUrl}
+                        alt={book.title}
+                        className="w-full h-full object-cover"
+                    />
+                ) : (
+                    <div className="px-4 text-center text-sm text-gray-500 leading-relaxed">
+                        {book.title}
+                    </div>
+                )}
             </div>
 
             <div className="text-center">
@@ -44,7 +51,7 @@ const BookCard = ({ book }: { book: BookData }) => {
                     {book.title}
                 </h3>
                 <p className="text-xs text-gray-500">
-                    {book.author}
+                    {book.authors.join(', ')}
                 </p>
             </div>
         </div>
@@ -54,11 +61,13 @@ const BookCard = ({ book }: { book: BookData }) => {
 export function LeftHomeContent({
     searchTerm,
     onSearchChange,
-    books
+    books,
+    isLoading
 }: {
     searchTerm: string;
     onSearchChange: (value: string) => void;
-    books: BookData[];
+    books: BookItem[];
+    isLoading?: boolean;
 }) {
     return (
         <div className="flex h-full w-full flex-col px-24">
@@ -83,23 +92,35 @@ export function LeftHomeContent({
                 />
             </div>
 
-            <div className="grid grid-cols-2 gap-x-20 gap-y-6">
-                {books.map(book => (
-                    <BookCard key={book.id} book={book} />
-                ))}
-            </div>
+            {isLoading ? (
+                <div className="flex flex-1 items-center justify-center">
+                    <p className="text-gray-400">불러오는 중...</p>
+                </div>
+            ) : books.length === 0 ? (
+                <div className="flex flex-1 items-center justify-center">
+                    <p className="text-gray-400">책이 없습니다.</p>
+                </div>
+            ) : (
+                <div className="grid grid-cols-2 gap-x-20 gap-y-6">
+                    {books.map(book => (
+                        <BookCard key={book.isbn} book={book} />
+                    ))}
+                </div>
+            )}
         </div>
     );
 }
 
-export function RightHomeContent({ books }: { books: BookData[] }) {
+export function RightHomeContent({ books }: { books: BookItem[] }) {
     return (
         <div className="flex h-full w-full flex-col px-24 py-[4.5rem]">
-            <div className="grid grid-cols-2 gap-x-20 gap-y-6">
-                {books.map(book => (
-                    <BookCard key={book.id} book={book} />
-                ))}
-            </div>
+            {books.length > 0 ? (
+                <div className="grid grid-cols-2 gap-x-20 gap-y-6">
+                    {books.map(book => (
+                        <BookCard key={book.isbn} book={book} />
+                    ))}
+                </div>
+            ) : null}
         </div>
     );
 }
