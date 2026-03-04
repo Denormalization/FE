@@ -8,7 +8,9 @@ export default function EyeTrack({ onGazeUpdate }: EyeTrackProps) {
     const lastElementIdRef = useRef<string | null>(null);
     const initializedRef = useRef(false);
     const gazeBufferRef = useRef<{ x: number; y: number }[]>([]);
-    const BUFFER_SIZE = 12;
+    const lastPointRef = useRef<{ x: number; y: number; t: number } | null>(null);
+    const isFixatingRef = useRef(false);
+    const MAX_BUFFER_SIZE = 30;
 
     useEffect(() => {
         if (initializedRef.current) return;
@@ -32,6 +34,19 @@ export default function EyeTrack({ onGazeUpdate }: EyeTrackProps) {
                 window.webgazer.setGazeListener((data: any) => {
                     if (data == null) return;
 
+                    const now = Date.now();
+                    let currentVelocity = 0;
+                    if (lastPointRef.current) {
+                        const dt = now - lastPointRef.current.t;
+                        if (dt > 0) {
+                            const dx = data.x - lastPointRef.current.x;
+                            const dy = data.y - lastPointRef.current.y;
+                            currentVelocity = Math.sqrt(dx * dx + dy * dy) / dt;
+                        }
+                    }
+                    lastPointRef.current = { x: data.x, y: data.y, t: now };
+                    isFixatingRef.current = currentVelocity < 0.45;
+
                     const lastAvg = gazeBufferRef.current.length > 0
                         ? {
                             x: gazeBufferRef.current.reduce((s, p) => s + p.x, 0) / gazeBufferRef.current.length,
@@ -41,43 +56,59 @@ export default function EyeTrack({ onGazeUpdate }: EyeTrackProps) {
 
                     const dist = Math.sqrt(Math.pow(data.x - lastAvg.x, 2) + Math.pow(data.y - lastAvg.y, 2));
 
-                    // Outlier rejection: if jump is too big, don't jump fully, just nudge
                     let targetX = data.x;
                     let targetY = data.y;
-                    if (gazeBufferRef.current.length > 5 && dist > 400) {
-                        targetX = lastAvg.x + (data.x - lastAvg.x) * 0.2;
-                        targetY = lastAvg.y + (data.y - lastAvg.y) * 0.2;
+
+                    const outlierThreshold = isFixatingRef.current ? 150 : 400;
+                    if (gazeBufferRef.current.length > 5 && dist > outlierThreshold) {
+                        const smoothFactor = isFixatingRef.current ? 0.08 : 0.25;
+                        targetX = lastAvg.x + (data.x - lastAvg.x) * smoothFactor;
+                        targetY = lastAvg.y + (data.y - lastAvg.y) * smoothFactor;
                     }
 
                     gazeBufferRef.current.push({ x: targetX, y: targetY });
-                    if (gazeBufferRef.current.length > BUFFER_SIZE) {
+
+                    const currentBufferSize = isFixatingRef.current ? 25 : 8;
+                    while (gazeBufferRef.current.length > currentBufferSize) {
                         gazeBufferRef.current.shift();
                     }
+                    if (gazeBufferRef.current.length > MAX_BUFFER_SIZE) {
+                        gazeBufferRef.current = gazeBufferRef.current.slice(-MAX_BUFFER_SIZE);
+                    }
 
-                    // Weighted Moving Average: more recent points have higher impact
-                    const totalWeight = gazeBufferRef.current.reduce((s, _, i) => s + (i + 1), 0);
-                    const avgX = gazeBufferRef.current.reduce((s, p, i) => s + p.x * (i + 1), 0) / totalWeight;
-                    const avgY = gazeBufferRef.current.reduce((s, p, i) => s + p.y * (i + 1), 0) / totalWeight;
+                    const totalWeight = gazeBufferRef.current.reduce((s, _, i) => s + Math.pow(i + 1, 1.2), 0);
+                    const avgX = gazeBufferRef.current.reduce((s, p, i) => s + p.x * Math.pow(i + 1, 1.2), 0) / totalWeight;
+                    const avgY = gazeBufferRef.current.reduce((s, p, i) => s + p.y * Math.pow(i + 1, 1.2), 0) / totalWeight;
 
                     setDotPos({ x: avgX, y: avgY });
 
-                    const element = document.elementFromPoint(avgX, avgY);
-                    if (element) {
-                        let current: HTMLElement | null = element as HTMLElement;
-                        let foundId: string | null = null;
+                    const getSentenceFromPoint = (x: number, y: number) => {
+                        const elements = [
+                            document.elementFromPoint(x, y),
+                            document.elementFromPoint(x, y - 20),
+                            document.elementFromPoint(x, y + 20),
+                            document.elementFromPoint(x, y - 40),
+                            document.elementFromPoint(x, y + 40)
+                        ];
 
-                        while (current && current !== document.body) {
-                            if (current.id && current.id.includes('sentence-')) {
-                                foundId = current.id;
-                                break;
+                        for (const element of elements) {
+                            if (!element) continue;
+                            let current: HTMLElement | null = element as HTMLElement;
+                            while (current && current !== document.body) {
+                                if (current.id && current.id.includes('sentence-')) {
+                                    return current.id;
+                                }
+                                current = current.parentElement;
                             }
-                            current = current.parentElement;
                         }
+                        return null;
+                    };
 
-                        if (foundId !== lastElementIdRef.current) {
-                            lastElementIdRef.current = foundId;
-                            if (onGazeUpdate) onGazeUpdate(foundId);
-                        }
+                    const foundId = getSentenceFromPoint(avgX, avgY);
+
+                    if (foundId !== lastElementIdRef.current) {
+                        lastElementIdRef.current = foundId;
+                        onGazeUpdate?.(foundId);
                     }
                 }).begin();
 
