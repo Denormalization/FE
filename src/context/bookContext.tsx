@@ -13,6 +13,7 @@ interface BookContextType {
     overlayContent: ReactNode;
     flipKey: number;
     setBookContent: (left: ReactNode, right: ReactNode) => void;
+    updateBookContent: (left: ReactNode, right: ReactNode) => void;
     setOverlayContent: (overlay: ReactNode) => void;
     activeGazeId: string | null;
     setActiveGazeId: (id: string | null) => void;
@@ -47,6 +48,10 @@ export function BookProvider({ children }: { children: ReactNode }) {
         setFlipKey(prev => prev + 1);
     }, []);
 
+    const updateBookContent = useCallback((left: ReactNode, right: ReactNode) => {
+        setContent({ leftContent: left, rightContent: right });
+    }, []);
+
     const setOverlayContentStable = useCallback((overlay: ReactNode) => {
         setOverlayContent(overlay);
     }, []);
@@ -56,12 +61,13 @@ export function BookProvider({ children }: { children: ReactNode }) {
         overlayContent,
         flipKey,
         setBookContent,
+        updateBookContent,
         setOverlayContent: setOverlayContentStable,
         triggerFlip,
         activeGazeId,
         setActiveGazeId,
         prevContent
-    }), [content, overlayContent, flipKey, setBookContent, setOverlayContentStable, triggerFlip, activeGazeId, prevContent]);
+    }), [content, overlayContent, flipKey, setBookContent, updateBookContent, setOverlayContentStable, triggerFlip, prevContent]);
 
     return (
         <BookContext.Provider value={value}>

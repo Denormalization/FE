@@ -46,6 +46,8 @@ export default function Book() {
                 clearTimeout(contentTimer);
                 clearTimeout(timer);
             };
+        } else {
+            setPageContent({ left: leftContent, right: rightContent });
         }
     }, [leftContent, rightContent, pathname, flipKey]);
 
