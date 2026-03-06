@@ -1,4 +1,12 @@
 export type OAuthProvider = 'google' | 'naver';
+export type UserRole = 'ADMIN' | 'USER';
+
+export interface User {
+  id: string;
+  email: string;
+  nickname: string;
+  role: UserRole;
+}
 
 export interface SignUpRequest {
   email: string;
@@ -37,3 +45,4 @@ export interface RefreshResponse {
   accessToken: string;
   expiresIn: number;
 }
+

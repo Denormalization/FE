@@ -6,6 +6,8 @@ import type {
   RefreshResponse,
   SignUpRequest,
   SignUpResponse,
+  User,
+  UserRole,
 } from '@/types/auth';
 
 export type {
@@ -16,6 +18,8 @@ export type {
   RefreshResponse,
   SignUpRequest,
   SignUpResponse,
+  User,
+  UserRole,
 } from '@/types/auth';
 
 const API_BASE =
@@ -175,6 +179,28 @@ export function clearTokens(): void {
   if (typeof window === 'undefined') return;
   window.localStorage.removeItem(STORAGE_ACCESS);
   window.localStorage.removeItem(STORAGE_REFRESH);
+}
+
+export async function getMe(): Promise<User> {
+  const accessToken = getAccessToken();
+  if (!accessToken) {
+    throw new Error('로그인 정보가 없습니다.');
+  }
+
+  const url = `${API_URL}/api/v1/auth/me`;
+  const res = await fetch(url, {
+    method: 'GET',
+    headers: {
+      'Authorization': `Bearer ${accessToken}`,
+    },
+  });
+
+  if (!res.ok) {
+    const text = await res.text();
+    throw new Error(text || `사용자 정보를 가져오는데 실패했습니다 (${res.status})`);
+  }
+
+  return (await res.json()) as User;
 }
 
 export async function logout(): Promise<void> {
