@@ -39,7 +39,7 @@ export default function Admin() {
     ];
 
     const leftContent = useMemo(() => (
-        <div className="flex h-full w-full flex-col px-16 py-8">
+        <div className="flex h-full w-full flex-col px-16 pt-16 pb-8">
             <header className="mb-10 flex items-center justify-between">
                 <div>
                     <h1 className="text-2xl font-bold tracking-tight text-[#333]">관리자 대시보드</h1>
@@ -66,39 +66,20 @@ export default function Admin() {
                     </div>
                 ))}
             </div>
-            <div>
-                <h2 className="mb-4 text-base font-bold text-[#333]">빠른 작업</h2>
-                <div className="space-y-3">
-                    <button className="flex w-full items-center gap-3 rounded-xl border border-gray-100 bg-white p-3 text-left transition-all hover:bg-gray-50">
-                        <span className="text-xl">➕</span>
-                        <div>
-                            <p className="text-xs font-bold text-gray-700">새 콘텐츠 추가</p>
-                            <p className="text-[10px] text-gray-400">도서 라이브러리 업데이트</p>
-                        </div>
-                    </button>
-                    <button className="flex w-full items-center gap-3 rounded-xl border border-gray-100 bg-white p-3 text-left transition-all hover:bg-gray-50">
-                        <span className="text-xl">📧</span>
-                        <div>
-                            <p className="text-xs font-bold text-gray-700">공지사항 전송</p>
-                            <p className="text-[10px] text-gray-400">전체 사용자 알림</p>
-                        </div>
-                    </button>
-                </div>
-            </div>
 
             <div className="mt-auto">
                 <button
                     onClick={handleLogout}
-                    className="flex items-center gap-2 text-sm font-medium text-red-400 hover:text-red-500 transition-colors"
+                    className="text-sm font-medium text-gray-400 hover:text-gray-600 transition-colors"
                 >
-                    <span>🚪</span> 로그아웃
+                    로그아웃
                 </button>
             </div>
         </div>
     ), [user]);
 
     const rightContent = useMemo(() => (
-        <div className="flex h-full w-full flex-col px-16 py-8">
+        <div className="flex h-full w-full flex-col px-16 pt-16 pb-8">
             <div className="mb-6 flex items-center justify-between">
                 <h2 className="text-xl font-bold text-[#333]">최근 가입 유저</h2>
                 <button className="text-xs font-semibold text-[#e57373] hover:underline">전체 보기</button>
@@ -122,21 +103,6 @@ export default function Admin() {
                         </div>
                     </div>
                 ))}
-            </div>
-            <div className="mt-8 rounded-2xl bg-gray-50 p-5">
-                <h3 className="mb-3 text-sm font-bold text-gray-700">시스템 모니터링</h3>
-                <div className="space-y-3">
-                    <div className="flex items-center justify-between">
-                        <span className="text-xs text-gray-500">서버 부하</span>
-                        <div className="h-1.5 w-32 rounded-full bg-gray-200 overflow-hidden">
-                            <div className="h-full w-[24%] bg-emerald-400"></div>
-                        </div>
-                    </div>
-                    <div className="flex items-center justify-between">
-                        <span className="text-xs text-gray-500">DB 연결</span>
-                        <span className="text-xs font-bold text-emerald-500">안정적</span>
-                    </div>
-                </div>
             </div>
         </div>
     ), []);
