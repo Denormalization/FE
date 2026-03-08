@@ -5,17 +5,15 @@ import { EyeTrackProps } from '@/types/eyeTrack';
 
 export default function EyeTrack({ onGazeUpdate }: EyeTrackProps) {
     const [dotPos, setDotPos] = useState({ x: 0, y: 0 });
-    const lastElementIdRef = useRef<string | null>(null);
     const initializedRef = useRef(false);
     const gazeBufferRef = useRef<{ x: number; y: number }[]>([]);
-<<<<<<< HEAD
     const lastPointRef = useRef<{ x: number; y: number; t: number } | null>(null);
     const isFixatingRef = useRef(false);
+    const sentenceRectsRef = useRef<{ id: string; rect: DOMRect; order: number }[]>([]);
+    const lastUpdateIdRef = useRef<string | null>(null);
+    const driftOffsetRef = useRef({ x: 0, y: 0 }); // Dynamic calibration offset
 
-    const MAX_BUFFER_SIZE = 30;
-=======
-    const BUFFER_SIZE = 12;
->>>>>>> 4063c94 (feat/#13 :: 로그인, 회원가입 api 구현 완료)
+    const MAX_BUFFER_SIZE = 40; // Increased for better smoothing
 
     useEffect(() => {
         if (initializedRef.current) return;
@@ -31,198 +29,169 @@ export default function EyeTrack({ onGazeUpdate }: EyeTrackProps) {
 
         const SCRIPT_URL = 'https://webgazer.cs.brown.edu/webgazer.js';
 
+        const updateSentenceRects = () => {
+            const elements = document.querySelectorAll('[id*="sentence-"]');
+            const rects: { id: string; rect: DOMRect; order: number }[] = [];
+            elements.forEach((el, index) => {
+                rects.push({
+                    id: el.id,
+                    rect: el.getBoundingClientRect(),
+                    order: index
+                });
+            });
+            sentenceRectsRef.current = rects;
+        };
+
+        // Phase 4: ResizeObserver to track layout changes
+        const resizeObserver = new ResizeObserver(updateSentenceRects);
+        resizeObserver.observe(document.body);
+
         const initWebGazer = () => {
             if (!window.webgazer || (window as any).webgazerInitialized) return;
             (window as any).webgazerInitialized = true;
+
+            updateSentenceRects();
+            const rectInterval = setInterval(updateSentenceRects, 1500);
 
             try {
                 window.webgazer.setGazeListener((data: any) => {
                     if (!data) return;
 
-<<<<<<< HEAD
                     const now = Date.now();
                     let velocity = 0;
 
                     if (lastPointRef.current) {
                         const dt = now - lastPointRef.current.t;
-
                         if (dt > 0) {
                             const dx = data.x - lastPointRef.current.x;
                             const dy = data.y - lastPointRef.current.y;
-
                             velocity = Math.sqrt(dx * dx + dy * dy) / dt;
                         }
                     }
 
                     lastPointRef.current = { x: data.x, y: data.y, t: now };
+                    isFixatingRef.current = velocity < 0.25;
 
-                    isFixatingRef.current = velocity < 0.45;
+                    // Apply Dynamic Drift Offset
+                    let rawX = data.x + driftOffsetRef.current.x;
+                    let rawY = data.y + driftOffsetRef.current.y;
+
+                    // Phase 4: Bottom-Screen Correction Bias
+                    const screenHeight = window.innerHeight;
+                    if (rawY > screenHeight * 0.7) {
+                        const bottomIntensity = (rawY - screenHeight * 0.7) / (screenHeight * 0.3);
+                        rawY += 35 * bottomIntensity;
+                    }
 
                     const lastAvg =
                         gazeBufferRef.current.length > 0
                             ? {
-                                x:
-                                    gazeBufferRef.current.reduce(
-                                        (s, p) => s + p.x,
-                                        0
-                                    ) / gazeBufferRef.current.length,
-                                y:
-                                    gazeBufferRef.current.reduce(
-                                        (s, p) => s + p.y,
-                                        0
-                                    ) / gazeBufferRef.current.length
+                                x: gazeBufferRef.current.reduce((s, p) => s + p.x, 0) / gazeBufferRef.current.length,
+                                y: gazeBufferRef.current.reduce((s, p) => s + p.y, 0) / gazeBufferRef.current.length
                             }
-                            : { x: data.x, y: data.y };
+                            : { x: rawX, y: rawY };
 
-                    const dist = Math.sqrt(
-                        (data.x - lastAvg.x) ** 2 +
-                        (data.y - lastAvg.y) ** 2
-                    );
+                    const dist = Math.sqrt((rawX - lastAvg.x) ** 2 + (rawY - lastAvg.y) ** 2);
 
-                    let targetX = data.x;
-                    let targetY = data.y;
+                    let targetX = rawX;
+                    let targetY = rawY;
 
-                    const outlierThreshold = isFixatingRef.current ? 150 : 400;
-
-                    if (
-                        gazeBufferRef.current.length > 5 &&
-                        dist > outlierThreshold
-                    ) {
-                        const smoothFactor = isFixatingRef.current
-                            ? 0.08
-                            : 0.25;
-
-                        targetX =
-                            lastAvg.x +
-                            (data.x - lastAvg.x) * smoothFactor;
-
-                        targetY =
-                            lastAvg.y +
-                            (data.y - lastAvg.y) * smoothFactor;
+                    // Phase 3: Adaptive Smoothing & Outlier Rejection
+                    const outlierThreshold = isFixatingRef.current ? 80 : 250;
+                    if (gazeBufferRef.current.length > 5 && dist > outlierThreshold) {
+                        const smoothFactor = isFixatingRef.current ? 0.02 : 0.08;
+                        targetX = lastAvg.x + (rawX - lastAvg.x) * smoothFactor;
+                        targetY = lastAvg.y + (rawY - lastAvg.y) * smoothFactor;
                     }
 
-                    gazeBufferRef.current.push({
-                        x: targetX,
-                        y: targetY
-                    });
+                    gazeBufferRef.current.push({ x: targetX, y: targetY });
 
-                    const bufferLimit = isFixatingRef.current ? 25 : 8;
-
+                    const bufferLimit = isFixatingRef.current ? 30 : 12;
                     while (gazeBufferRef.current.length > bufferLimit) {
                         gazeBufferRef.current.shift();
                     }
 
-                    if (gazeBufferRef.current.length > MAX_BUFFER_SIZE) {
-                        gazeBufferRef.current =
-                            gazeBufferRef.current.slice(-MAX_BUFFER_SIZE);
-                    }
+                    const weightPower = isFixatingRef.current ? 2.0 : 1.5;
+                    const totalWeight = gazeBufferRef.current.reduce((s, _, i) => s + Math.pow(i + 1, weightPower), 0);
 
-                    const totalWeight =
-                        gazeBufferRef.current.reduce(
-                            (s, _, i) => s + Math.pow(i + 1, 1.2),
-                            0
-                        );
+                    const avgX = gazeBufferRef.current.reduce((s, p, i) => s + p.x * Math.pow(i + 1, weightPower), 0) / totalWeight;
+                    const avgY = gazeBufferRef.current.reduce((s, p, i) => s + p.y * Math.pow(i + 1, weightPower), 0) / totalWeight;
 
-                    const avgX =
-                        gazeBufferRef.current.reduce(
-                            (s, p, i) =>
-                                s + p.x * Math.pow(i + 1, 1.2),
-                            0
-                        ) / totalWeight;
+                    // Phase 3: Spatial Logic & Magnetic Snapping
+                    const findClosestSentence = (x: number, y: number) => {
+                        let closestId: string | null = null;
+                        let minDistance = Infinity;
+                        let closestRect: DOMRect | null = null;
 
-                    const avgY =
-                        gazeBufferRef.current.reduce(
-                            (s, p, i) =>
-                                s + p.y * Math.pow(i + 1, 1.2),
-                            0
-                        ) / totalWeight;
+                        const STICKY_BIAS = 45;
+                        const NEXT_SENTENCE_BIAS = 60;
 
-                    setDotPos({ x: avgX, y: avgY });
+                        // Phase 4: Adaptive Vertical Tolerance (larger at bottom)
+                        const screenHeight = window.innerHeight;
+                        const verticalToleranceMultiplier = y > screenHeight * 0.65 ? 1.6 : 1.0;
+                        const MAX_VERTICAL_DISTANCE = 180 * verticalToleranceMultiplier;
 
-                    const getSentenceFromPoint = (
-                        x: number,
-                        y: number
-                    ) => {
-                        const offsets = [0, -20, 20, -40, 40];
+                        const currentSentence = sentenceRectsRef.current.find(s => s.id === lastUpdateIdRef.current);
 
-                        for (const offset of offsets) {
-                            const element =
-                                document.elementFromPoint(
-                                    x,
-                                    y + offset
-                                );
+                        sentenceRectsRef.current.forEach(({ id, rect, order }) => {
+                            const centerX = rect.left + rect.width / 2;
+                            const centerY = rect.top + rect.height / 2;
 
-                            if (!element) continue;
+                            const dy = Math.abs(y - centerY);
+                            const dx = Math.abs(x - centerX);
 
-                            let current =
-                                element as HTMLElement | null;
+                            if (dy < MAX_VERTICAL_DISTANCE && dx < 500) {
+                                let distance = dy;
 
-                            while (
-                                current &&
-                                current !== document.body
-                            ) {
-                                if (
-                                    current.id &&
-                                    current.id.includes(
-                                        'sentence-'
-                                    )
-                                ) {
-                                    return current.id;
+                                // Hysteresis & Prediction Logic
+                                if (id === lastUpdateIdRef.current) {
+                                    distance -= STICKY_BIAS;
+                                } else if (currentSentence && order === currentSentence.order + 1) {
+                                    // Prediction: Next sentence in order is more likely
+                                    distance -= NEXT_SENTENCE_BIAS;
                                 }
 
-                                current =
-                                    current.parentElement;
-=======
-                    const lastAvg = gazeBufferRef.current.length > 0
-                        ? {
-                            x: gazeBufferRef.current.reduce((s, p) => s + p.x, 0) / gazeBufferRef.current.length,
-                            y: gazeBufferRef.current.reduce((s, p) => s + p.y, 0) / gazeBufferRef.current.length
-                        }
-                        : { x: data.x, y: data.y };
-
-                    const dist = Math.sqrt(Math.pow(data.x - lastAvg.x, 2) + Math.pow(data.y - lastAvg.y, 2));
-
-                    // Outlier rejection: if jump is too big, don't jump fully, just nudge
-                    let targetX = data.x;
-                    let targetY = data.y;
-                    if (gazeBufferRef.current.length > 5 && dist > 400) {
-                        targetX = lastAvg.x + (data.x - lastAvg.x) * 0.2;
-                        targetY = lastAvg.y + (data.y - lastAvg.y) * 0.2;
-                    }
-
-                    gazeBufferRef.current.push({ x: targetX, y: targetY });
-                    if (gazeBufferRef.current.length > BUFFER_SIZE) {
-                        gazeBufferRef.current.shift();
-                    }
-
-                    // Weighted Moving Average: more recent points have higher impact
-                    const totalWeight = gazeBufferRef.current.reduce((s, _, i) => s + (i + 1), 0);
-                    const avgX = gazeBufferRef.current.reduce((s, p, i) => s + p.x * (i + 1), 0) / totalWeight;
-                    const avgY = gazeBufferRef.current.reduce((s, p, i) => s + p.y * (i + 1), 0) / totalWeight;
-
-                    setDotPos({ x: avgX, y: avgY });
-
-                    const element = document.elementFromPoint(avgX, avgY);
-                    if (element) {
-                        let current: HTMLElement | null = element as HTMLElement;
-                        let foundId: string | null = null;
-
-                        while (current && current !== document.body) {
-                            if (current.id && current.id.includes('sentence-')) {
-                                foundId = current.id;
-                                break;
->>>>>>> 4063c94 (feat/#13 :: 로그인, 회원가입 api 구현 완료)
+                                if (distance < minDistance) {
+                                    minDistance = distance;
+                                    closestId = id;
+                                    closestRect = rect;
+                                }
                             }
-                        }
+                        });
 
-                        return null;
+                        return { closestId, closestRect };
                     };
 
-                    const foundId = getSentenceFromPoint(avgX, avgY);
+                    const { closestId, closestRect } = findClosestSentence(avgX, avgY);
 
-                    if (foundId !== lastElementIdRef.current) {
-                        lastElementIdRef.current = foundId;
-                        onGazeUpdate?.(foundId);
+                    let finalX = avgX;
+                    let finalY = avgY;
+
+                    // Magnetic Snapping: Snap to sentence center-line if extremely close
+                    if (closestRect && isFixatingRef.current) {
+                        const rect = closestRect as DOMRect;
+                        const rectCenterY = rect.top + rect.height / 2;
+
+                        // Phase 4: Expanded Snapping Zone at bottom
+                        const screenHeight = window.innerHeight;
+                        const snapThreshold = rectCenterY > screenHeight * 0.7 ? 70 : 40;
+
+                        if (Math.abs(avgY - rectCenterY) < snapThreshold) {
+                            finalY = rectCenterY; // Y-snapping
+
+                            // Dynamic Calibration: Gradually adjust drift offset
+                            const errorY = rectCenterY - avgY;
+                            driftOffsetRef.current.y += errorY * 0.005;
+                            const errorX = (rect.left + rect.width / 2) - avgX;
+                            driftOffsetRef.current.x += errorX * 0.002;
+                        }
+                    }
+
+                    setDotPos({ x: finalX, y: finalY });
+
+                    if (closestId !== lastUpdateIdRef.current) {
+                        lastUpdateIdRef.current = closestId;
+                        onGazeUpdate?.(closestId);
                     }
                 }).begin();
 
@@ -239,97 +208,41 @@ export default function EyeTrack({ onGazeUpdate }: EyeTrackProps) {
             } catch (err) {
                 console.error('WebGazer initialization error:', err);
             }
+
+            return () => {
+                clearInterval(rectInterval);
+            };
         };
 
         if (window.webgazer) {
             initWebGazer();
         } else {
-<<<<<<< HEAD
-            const existingScript = document.querySelector(
-                `script[src="${SCRIPT_URL}"]`
-            );
-
-            if (existingScript) {
-                existingScript.addEventListener(
-                    'load',
-                    initWebGazer
-                );
-            } else {
-                const script =
-                    document.createElement('script');
-
-=======
-            const existingScript = document.querySelector(`script[src="${SCRIPT_URL}"]`);
-            if (existingScript) {
-                existingScript.addEventListener('load', initWebGazer);
-            } else {
-                const script = document.createElement('script');
->>>>>>> 4063c94 (feat/#13 :: 로그인, 회원가입 api 구현 완료)
-                script.src = SCRIPT_URL;
-                script.async = true;
-                script.onload = initWebGazer;
-                script.onerror = () => { };
-<<<<<<< HEAD
-
-=======
->>>>>>> 4063c94 (feat/#13 :: 로그인, 회원가입 api 구현 완료)
-                document.body.appendChild(script);
-            }
+            const script = document.createElement('script');
+            script.src = SCRIPT_URL;
+            script.async = true;
+            script.onload = initWebGazer;
+            document.body.appendChild(script);
         }
 
         return () => {
+            resizeObserver.disconnect();
             if (window.webgazer) {
                 try {
                     window.webgazer.pause();
                     window.webgazer.end();
-<<<<<<< HEAD
-
                     (window as any).webgazerInitialized = false;
-
-                    const video = document.getElementById(
-                        'webgazerVideoFeed'
-                    ) as HTMLVideoElement;
-
-                    if (video && video.srcObject) {
-                        const stream =
-                            video.srcObject as MediaStream;
-                        stream
-                            .getTracks()
-                            .forEach((track) => track.stop());
-                    }
-
-                    [
-                        'webgazerVideoContainer',
-                        'webgazerVideoFeed',
-                        'webgazerFaceOverlay',
-                        'webgazerFaceFeedbackBox'
-                    ].forEach((id) => {
-                        const el =
-                            document.getElementById(id);
-                        if (el) el.remove();
-                    });
-                } catch (e) {
-                    console.error(
-                        'WebGazer cleanup error:',
-                        e
-                    );
-=======
-                    (window as any).webgazerInitialized = false;
-
                     const video = document.getElementById('webgazerVideoFeed') as HTMLVideoElement;
                     if (video && video.srcObject) {
                         const stream = video.srcObject as MediaStream;
-                        stream.getTracks().forEach(track => track.stop());
+                        stream.getTracks().forEach((track) => track.stop());
                     }
-
                     ['webgazerVideoContainer', 'webgazerVideoFeed', 'webgazerFaceOverlay', 'webgazerFaceFeedbackBox']
-                        .forEach(id => {
+                        .forEach((id) => {
                             const el = document.getElementById(id);
                             if (el) el.remove();
                         });
                 } catch (e) {
                     console.error('WebGazer cleanup error:', e);
->>>>>>> 4063c94 (feat/#13 :: 로그인, 회원가입 api 구현 완료)
                 }
             }
         };
