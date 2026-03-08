@@ -53,9 +53,9 @@ const PageContent = ({
                                 boxDecorationBreak: 'clone',
                             } as any}
                             className={`
-                                transition-all duration-500 rounded-md px-1.5 py-0.5 mx-0.5
+                                transition-all duration-500 px-1 py-0.5 mx-0.5
                                 ${isActive
-                                    ? 'bg-amber-300/90 text-amber-950 font-bold shadow-[0_2px_15px_rgba(251,191,36,0.5)] z-10'
+                                    ? 'border-b-2 border-amber-400/80 z-10'
                                     : 'text-gray-500 font-medium'
                                 }
                             `}
