@@ -53,8 +53,16 @@ export async function fetchBooks(params?: {
 }
 
 export interface Chapter {
+  id: number;
   orderNum: number;
   title: string;
+}
+
+export interface ChapterContent {
+  id: number;
+  orderNum: number;
+  title: string;
+  content: string;
 }
 
 export interface BookDetail {
@@ -86,4 +94,26 @@ export async function fetchBookDetail(isbn: string): Promise<BookDetail> {
   }
 
   return (await res.json()) as BookDetail;
+}
+
+export async function fetchChapterContent(
+  isbn: string,
+  chapterId: string
+): Promise<ChapterContent> {
+  const url = `${API_BASE}/api/v1/books/${encodeURIComponent(isbn)}/chapters/${encodeURIComponent(chapterId)}`;
+  const headers: Record<string, string> = {};
+
+  const token = getAccessToken();
+  if (token) {
+    headers['Authorization'] = `Bearer ${token}`;
+  }
+
+  const res = await fetch(url, { headers });
+
+  if (!res.ok) {
+    const text = await res.text();
+    throw new Error(text || `챕터 본문 조회 실패 (${res.status})`);
+  }
+
+  return (await res.json()) as ChapterContent;
 }
