@@ -69,7 +69,7 @@ export function LeftBookDetailContent({ book }: { book: BookData }) {
     );
 }
 
-export function RightBookDetailContent({ book }: { book: BookData }) {
+export function RightBookDetailContent({ book, onStartReading }: { book: BookData; onStartReading?: () => void }) {
     const [view, setView] = useState<'quote' | 'intro'>('quote');
 
     const handleToggleView = () => {
@@ -114,7 +114,23 @@ export function RightBookDetailContent({ book }: { book: BookData }) {
                 )}
             </div>
 
-            <div className="absolute bottom-10 right-12">
+            <div className="absolute bottom-10 left-12 right-12 flex items-center justify-between">
+                {onStartReading ? (
+                    <button
+                        onClick={onStartReading}
+                        className="flex items-center gap-2 px-5 py-2.5 rounded-lg text-white font-bold
+                            bg-gradient-to-br from-[#409659] to-[#38844E]
+                            shadow-[0_4px_10px_rgba(0,0,0,0.15)]
+                            transition-all duration-300
+                            hover:scale-105 hover:shadow-[0_6px_14px_rgba(0,0,0,0.25)] hover:brightness-110
+                            active:scale-95 cursor-pointer text-sm"
+                    >
+                        <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor">
+                            <path d="M8 5v14l11-7z" />
+                        </svg>
+                        <span>독서 시작</span>
+                    </button>
+                ) : <div />}
                 <button
                     onClick={handleToggleView}
                     className="flex items-center gap-2 text-gray-400 hover:text-gray-600 transition-colors text-sm"

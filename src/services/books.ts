@@ -132,6 +132,47 @@ export interface ReadingResponse {
   readings: ReadingItem[];
 }
 
+export interface StartReadingRequest {
+  bookId: number;
+  chapterId: number;
+}
+
+export interface StartReadingResponse {
+  id: number;
+  bookId: number;
+  chapterId: number;
+  charOffset: number;
+  progressPercent: number;
+  startedAt: string;
+}
+
+export async function startReading(
+  body: StartReadingRequest
+): Promise<StartReadingResponse> {
+  const url = `${API_BASE}/api/v1/reading`;
+  const headers: Record<string, string> = {
+    'Content-Type': 'application/json',
+  };
+
+  const token = getAccessToken();
+  if (token) {
+    headers['Authorization'] = `Bearer ${token}`;
+  }
+
+  const res = await fetch(url, {
+    method: 'POST',
+    headers,
+    body: JSON.stringify(body),
+  });
+
+  if (!res.ok) {
+    const text = await res.text();
+    throw new Error(text || `독서 시작 실패 (${res.status})`);
+  }
+
+  return (await res.json()) as StartReadingResponse;
+}
+
 export async function fetchReadingBooks(): Promise<ReadingResponse> {
   const url = `${API_BASE}/api/v1/reading`;
   const headers: Record<string, string> = {};
