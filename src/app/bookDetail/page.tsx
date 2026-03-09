@@ -32,6 +32,11 @@ function BookDetailContent() {
             setChapterContent(text);
             setCurrentChapterId(chapterId);
             setReadingText(text, data.title);
+            localStorage.setItem('lastRead', JSON.stringify({
+                isbn: String(data.isbn),
+                chapterId: String(chapterId),
+                title: data.title,
+            }));
             updateBookContent(
                 <AnimatedPageContent text={text} />,
                 <AnimatedPageContent text={text} delay={1200} />
