@@ -8,7 +8,6 @@ import { BookItem, fetchBooks } from '@/services/books';
 
 export default function HomePage() {
     const { setBookContent, updateBookContent } = useBook();
-    const [searchTerm, setSearchTerm] = useState('');
     const [books, setBooks] = useState<BookItem[]>([]);
     const [isLoading, setIsLoading] = useState(true);
     const isInitialMount = useRef(true);
@@ -29,24 +28,14 @@ export default function HomePage() {
         loadBooks();
     }, [loadBooks]);
 
-    const filteredBooks = books.filter(book =>
-        book.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        book.authors.some(a => a.toLowerCase().includes(searchTerm.toLowerCase()))
-    );
-
-    const leftBooks = filteredBooks.slice(0, 4);
-    const rightBooks = filteredBooks.slice(4, 8);
-
     useEffect(() => {
         const left = (
             <LeftHomeContent
-                searchTerm={searchTerm}
-                onSearchChange={setSearchTerm}
-                books={leftBooks}
+                books={books}
                 isLoading={isLoading}
             />
         );
-        const right = <RightHomeContent books={rightBooks} />;
+        const right = <RightHomeContent books={books.slice(4, 8)} />;
 
         if (isInitialMount.current) {
             setBookContent(left, right);
@@ -54,7 +43,7 @@ export default function HomePage() {
         } else {
             updateBookContent(left, right);
         }
-    }, [searchTerm, books, isLoading]);
+    }, [books, isLoading]);
 
     return null;
 }
