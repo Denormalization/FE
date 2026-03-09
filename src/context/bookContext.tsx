@@ -12,9 +12,12 @@ interface BookContextType {
     rightContent: ReactNode;
     overlayContent: ReactNode;
     flipKey: number;
+    readingText: string;
+    readingTitle: string;
     setBookContent: (left: ReactNode, right: ReactNode) => void;
     updateBookContent: (left: ReactNode, right: ReactNode) => void;
     setOverlayContent: (overlay: ReactNode) => void;
+    setReadingText: (text: string, title?: string) => void;
     triggerFlip: () => void;
     prevContent: ContentState | null;
 }
@@ -29,6 +32,8 @@ export function BookProvider({ children }: { children: ReactNode }) {
     const [overlayContent, setOverlayContent] = useState<ReactNode>(null);
     const [prevContent, setPrevContent] = useState<ContentState | null>(null);
     const [flipKey, setFlipKey] = useState(0);
+    const [readingText, setReadingTextState] = useState('');
+    const [readingTitle, setReadingTitle] = useState('');
 
     const contentRef = useRef(content);
     useEffect(() => {
@@ -54,16 +59,24 @@ export function BookProvider({ children }: { children: ReactNode }) {
         setOverlayContent(overlay);
     }, []);
 
+    const setReadingText = useCallback((text: string, title?: string) => {
+        setReadingTextState(text);
+        if (title !== undefined) setReadingTitle(title);
+    }, []);
+
     const value = useMemo(() => ({
         ...content,
         overlayContent,
         flipKey,
+        readingText,
+        readingTitle,
         setBookContent,
         updateBookContent,
         setOverlayContent: setOverlayContentStable,
+        setReadingText,
         triggerFlip,
         prevContent
-    }), [content, overlayContent, flipKey, setBookContent, updateBookContent, setOverlayContentStable, triggerFlip, prevContent]);
+    }), [content, overlayContent, flipKey, readingText, readingTitle, setBookContent, updateBookContent, setOverlayContentStable, setReadingText, triggerFlip, prevContent]);
 
     return (
         <BookContext.Provider value={value}>

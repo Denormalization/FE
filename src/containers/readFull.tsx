@@ -9,9 +9,13 @@ import type { ViewerSettings } from '@/components/ui/viewerSettingsPanel';
 import { READ_FULL_CONSTANTS } from '@/constants/readFull';
 import { VIEWER_DEFAULTS } from '@/constants/viewerSettings';
 import { VIEWER_THEMES } from '@/constants/viewerSettings';
+import { useBook } from '@/context/bookContext';
 import { POEM_TEXT } from '@/mock/read';
 
 export default function ReadFull() {
+    const { readingText, readingTitle } = useBook();
+    const content = readingText || POEM_TEXT;
+    const title = readingTitle || READ_FULL_CONSTANTS.TITLE;
     const [showSettings, setShowSettings] = useState(false);
     const [showBars, setShowBars] = useState(true);
     const [viewerSettings, setViewerSettings] = useState<ViewerSettings>({
@@ -59,8 +63,8 @@ export default function ReadFull() {
             className={`w-full h-full ${themeBg} flex flex-col overflow-hidden relative transition-colors pointer-events-auto`}
             onDoubleClick={handleDoubleClick}
         >
-            <ReadFullHeader title={READ_FULL_CONSTANTS.TITLE} showBars={showBars} theme={viewerSettings.theme} />
-            <ReadFullContent content={POEM_TEXT} viewerSettings={viewerSettings} />
+            <ReadFullHeader title={title} showBars={showBars} theme={viewerSettings.theme} />
+            <ReadFullContent content={content} viewerSettings={viewerSettings} />
             <ReadFullFooter
                 currentPage={READ_FULL_CONSTANTS.CURRENT_PAGE}
                 totalPages={READ_FULL_CONSTANTS.TOTAL_PAGES}
