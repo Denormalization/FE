@@ -9,19 +9,21 @@ const API_BASE =
     ? process.env.NEXT_PUBLIC_API_PROXY ?? '/api/backend'
     : process.env.NEXT_PUBLIC_API_URL ?? '';
 
-function MetadataForm({ onUpload, loading }: { onUpload: (meta: { title: string; author: string; description: string }) => void; loading: boolean }) {
+function MetadataForm({ onUpload, loading }: { onUpload: (meta: { isbn: string; title: string; author: string; description: string }) => void; loading: boolean }) {
+  const [isbn, setIsbn] = useState('');
   const [title, setTitle] = useState('');
   const [author, setAuthor] = useState('');
   const [description, setDescription] = useState('');
 
   return (
     <div className="w-full space-y-2 mb-4">
+      <input type="text" placeholder="ISBN (필수)" value={isbn} onChange={(e) => setIsbn(e.target.value)} className="w-full px-3 py-2 border rounded text-sm" />
       <input type="text" placeholder="제목 (필수)" value={title} onChange={(e) => setTitle(e.target.value)} className="w-full px-3 py-2 border rounded text-sm" />
       <input type="text" placeholder="저자" value={author} onChange={(e) => setAuthor(e.target.value)} className="w-full px-3 py-2 border rounded text-sm" />
       <input type="text" placeholder="설명" value={description} onChange={(e) => setDescription(e.target.value)} className="w-full px-3 py-2 border rounded text-sm" />
       <p className="text-xs text-gray-400">.txt 파일은 metadata가 필수입니다.</p>
       <button
-        onClick={() => onUpload({ title, author, description })}
+        onClick={() => onUpload({ isbn, title, author, description })}
         disabled={loading}
         className="w-full mt-2 px-6 py-2 bg-blue-600 text-white rounded-md disabled:opacity-40 hover:bg-blue-700 transition-colors text-sm"
       >
@@ -41,21 +43,22 @@ export default function AdminUploadPage() {
 
   const isTxt = file?.name.endsWith('.txt') ?? false;
 
-  const handleUpload = useCallback(async (meta: { title: string; author: string; description: string }) => {
+  const handleUpload = useCallback(async (meta: { isbn: string; title: string; author: string; description: string }) => {
     const selectedFile = fileRef.current;
     if (!selectedFile) return alert('파일을 선택해주세요');
 
     const token = getAccessToken();
     if (!token) return alert('로그인이 필요합니다');
 
-    if (selectedFile.name.endsWith('.txt') && !meta.title) {
-      return alert('.txt 파일은 제목(metadata)이 필수입니다');
+    if (selectedFile.name.endsWith('.txt') && (!meta.title || !meta.isbn)) {
+      return alert('.txt 파일은 ISBN과 제목이 필수입니다');
     }
 
     const formData = new FormData();
     formData.append('file', selectedFile);
-    if (meta.title || meta.author || meta.description) {
+    if (meta.isbn || meta.title || meta.author || meta.description) {
       const metadata: Record<string, unknown> = {};
+      if (meta.isbn) metadata.isbn = Number(meta.isbn);
       if (meta.title) metadata.title = meta.title;
       if (meta.author) metadata.authors = [meta.author];
       if (meta.description) metadata.description = meta.description;
@@ -104,7 +107,10 @@ export default function AdminUploadPage() {
         )}
         {!isTxt && (
           <button
-            onClick={() => handleUpload({ title: '', author: '', description: '' })}
+            onClick={() => handleUpload({
+              title: '', author: '', description: '',
+              isbn: ''
+            })}
             disabled={loading || !file}
             className="px-6 py-2 bg-blue-600 text-white rounded-md disabled:opacity-40 hover:bg-blue-700 transition-colors text-sm"
           >
