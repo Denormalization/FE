@@ -1,18 +1,26 @@
 'use client';
 
-import Book from '@/components/ui/book';
 import { useState, useEffect, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
 import { toast } from 'react-toastify';
 import { useBook } from '@/context/bookContext';
-import { LeftHomeContent, RightHomeContent } from '@/containers/mypage';
-import { BOOKS } from '@/mock/home';
+import { LeftMyPageContent, RightMyPageContent } from '@/containers/mypage';
+import { fetchReadingBooks, ReadingItem } from '@/services/books';
 import { logout } from '@/lib/auth';
 
 export default function MyPagePage() {
     const { setBookContent } = useBook();
     const router = useRouter();
     const [searchTerm, setSearchTerm] = useState('');
+    const [readings, setReadings] = useState<ReadingItem[]>([]);
+
+    useEffect(() => {
+        fetchReadingBooks()
+            .then((data) => setReadings(data.readings))
+            .catch((err) => {
+                toast.error(err instanceof Error ? err.message : '읽고 있는 책을 불러오지 못했습니다.');
+            });
+    }, []);
 
     const handleLogout = useCallback(async () => {
         try {
@@ -24,24 +32,24 @@ export default function MyPagePage() {
         }
     }, [router]);
 
-    const filteredBooks = BOOKS.filter(book =>
-        book.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        book.author.toLowerCase().includes(searchTerm.toLowerCase())
+    const filtered = readings.filter(item =>
+        item.bookTitle.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        item.chapterTitle.toLowerCase().includes(searchTerm.toLowerCase())
     );
 
-    const leftBooks = filteredBooks.slice(0, 4);
-    const rightBooks = filteredBooks.slice(4, 8);
+    const leftItems = filtered.slice(0, 4);
+    const rightItems = filtered.slice(4, 8);
 
     useEffect(() => {
         setBookContent(
-            <LeftHomeContent
+            <LeftMyPageContent
                 searchTerm={searchTerm}
                 onSearchChange={setSearchTerm}
-                books={leftBooks}
+                items={leftItems}
             />,
-            <RightHomeContent books={rightBooks} onLogout={handleLogout} />
+            <RightMyPageContent items={rightItems} onLogout={handleLogout} />
         );
-    }, [searchTerm, handleLogout]);
+    }, [searchTerm, readings, handleLogout]);
 
     return null;
 }

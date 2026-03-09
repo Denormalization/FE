@@ -2,14 +2,13 @@
 
 import { useRouter } from 'next/navigation';
 import { useBook } from '@/context/bookContext';
-import { BookData, BOOKS } from '@/mock/home';
+import { ReadingItem } from '@/services/books';
 
-const BookCard = ({ book }: { book: BookData }) => {
+const ReadingCard = ({ item }: { item: ReadingItem }) => {
     const router = useRouter();
-    const { triggerFlip } = useBook();
 
     const handleClick = () => {
-        router.push(`/bookDetail?id=${book.id}`);
+        router.push(`/bookDetail?isbn=${item.bookIsbn}`);
     };
 
     return (
@@ -34,36 +33,39 @@ const BookCard = ({ book }: { book: BookData }) => {
                     group-hover:shadow-md
                 "
             >
-                <div className="px-4 text-center text-sm text-gray-500 leading-relaxed">
-                    {book.title}
-                </div>
+                {item.coverUrl ? (
+                    <img src={item.coverUrl} alt={item.bookTitle} className="w-full h-full object-cover" />
+                ) : (
+                    <div className="px-4 text-center text-sm text-gray-500 leading-relaxed">
+                        {item.bookTitle}
+                    </div>
+                )}
             </div>
 
-            <div className="text-center">
-                <h3 className="text-sm font-semibold text-gray-800 leading-snug">
-                    {book.title}
+            <div className="text-center w-[14rem]">
+                <h3 className="text-sm font-semibold text-gray-800 leading-snug truncate">
+                    {item.bookTitle}
                 </h3>
-                <p className="text-xs text-gray-500">
-                    {book.author}
+                <p className="text-xs text-gray-500 mt-0.5">
+                    {item.chapterTitle} · {Math.round(item.progressPercent)}%
                 </p>
             </div>
         </div>
     );
 };
 
-export function LeftHomeContent({
+export function LeftMyPageContent({
     searchTerm,
     onSearchChange,
-    books
+    items
 }: {
     searchTerm: string;
     onSearchChange: (value: string) => void;
-    books: BookData[];
+    items: ReadingItem[];
 }) {
     return (
         <div className="flex h-full w-full flex-col px-24">
             <div className="mt-6 mb-5 flex items-center gap-4">
-
                 <img
                     src="/icons/search.svg"
                     alt="search"
@@ -84,15 +86,20 @@ export function LeftHomeContent({
             </div>
 
             <div className="grid grid-cols-2 gap-x-20 gap-y-6">
-                {books.map(book => (
-                    <BookCard key={book.id} book={book} />
+                {items.map(item => (
+                    <ReadingCard key={`${item.bookIsbn}-${item.chapterId}`} item={item} />
                 ))}
             </div>
+            {items.length === 0 && (
+                <div className="flex-1 flex items-center justify-center">
+                    <p className="text-gray-400 text-sm">읽고 있는 책이 없습니다.</p>
+                </div>
+            )}
         </div>
     );
 }
 
-export function RightHomeContent({ books, onLogout }: { books: BookData[]; onLogout?: () => void }) {
+export function RightMyPageContent({ items, onLogout }: { items: ReadingItem[]; onLogout?: () => void }) {
     return (
         <div className="flex h-full w-full flex-col px-24 py-[4.5rem]">
             {onLogout && (
@@ -106,8 +113,8 @@ export function RightHomeContent({ books, onLogout }: { books: BookData[]; onLog
                 </div>
             )}
             <div className="grid grid-cols-2 gap-x-20 gap-y-6">
-                {books.map(book => (
-                    <BookCard key={book.id} book={book} />
+                {items.map(item => (
+                    <ReadingCard key={`${item.bookIsbn}-${item.chapterId}`} item={item} />
                 ))}
             </div>
         </div>
