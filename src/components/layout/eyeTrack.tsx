@@ -11,9 +11,11 @@ export default function EyeTrack({ onGazeUpdate }: EyeTrackProps) {
     const isFixatingRef = useRef(false);
     const sentenceRectsRef = useRef<{ id: string; rect: DOMRect; order: number }[]>([]);
     const lastUpdateIdRef = useRef<string | null>(null);
-    const driftOffsetRef = useRef({ x: 0, y: 0 }); // Dynamic calibration offset
+    const dwellCountRef = useRef<number>(0);
+    const candidateIdRef = useRef<string | null>(null);
+    const driftOffsetRef = useRef({ x: 0, y: 0 });
 
-    const MAX_BUFFER_SIZE = 40; // Increased for better smoothing
+    const MAX_BUFFER_SIZE = 40;
 
     useEffect(() => {
         if (initializedRef.current) return;
@@ -22,7 +24,7 @@ export default function EyeTrack({ onGazeUpdate }: EyeTrackProps) {
         if (typeof window !== 'undefined') {
             if (!(window as any).WebGazerConfig) {
                 (window as any).WebGazerConfig = {
-                    basePath: '/engine/'
+                    basePath: '/mediapipe/face_mesh/'
                 };
             }
         }
@@ -42,7 +44,6 @@ export default function EyeTrack({ onGazeUpdate }: EyeTrackProps) {
             sentenceRectsRef.current = rects;
         };
 
-        // Phase 4: ResizeObserver to track layout changes
         const resizeObserver = new ResizeObserver(updateSentenceRects);
         resizeObserver.observe(document.body);
 
@@ -72,15 +73,16 @@ export default function EyeTrack({ onGazeUpdate }: EyeTrackProps) {
                     lastPointRef.current = { x: data.x, y: data.y, t: now };
                     isFixatingRef.current = velocity < 0.25;
 
-                    // Apply Dynamic Drift Offset
                     let rawX = data.x + driftOffsetRef.current.x;
                     let rawY = data.y + driftOffsetRef.current.y;
 
-                    // Phase 4: Bottom-Screen Correction Bias
                     const screenHeight = window.innerHeight;
                     if (rawY > screenHeight * 0.7) {
                         const bottomIntensity = (rawY - screenHeight * 0.7) / (screenHeight * 0.3);
                         rawY += 35 * bottomIntensity;
+                    } else if (rawY < screenHeight * 0.3) {
+                        const topIntensity = (screenHeight * 0.3 - rawY) / (screenHeight * 0.3);
+                        rawY -= 25 * topIntensity;
                     }
 
                     const lastAvg =
@@ -96,7 +98,6 @@ export default function EyeTrack({ onGazeUpdate }: EyeTrackProps) {
                     let targetX = rawX;
                     let targetY = rawY;
 
-                    // Phase 3: Adaptive Smoothing & Outlier Rejection
                     const outlierThreshold = isFixatingRef.current ? 80 : 250;
                     if (gazeBufferRef.current.length > 5 && dist > outlierThreshold) {
                         const smoothFactor = isFixatingRef.current ? 0.02 : 0.08;
@@ -117,19 +118,29 @@ export default function EyeTrack({ onGazeUpdate }: EyeTrackProps) {
                     const avgX = gazeBufferRef.current.reduce((s, p, i) => s + p.x * Math.pow(i + 1, weightPower), 0) / totalWeight;
                     const avgY = gazeBufferRef.current.reduce((s, p, i) => s + p.y * Math.pow(i + 1, weightPower), 0) / totalWeight;
 
-                    // Phase 3: Spatial Logic & Magnetic Snapping
                     const findClosestSentence = (x: number, y: number) => {
                         let closestId: string | null = null;
                         let minDistance = Infinity;
                         let closestRect: DOMRect | null = null;
 
-                        const STICKY_BIAS = 45;
-                        const NEXT_SENTENCE_BIAS = 60;
+                        const STICKY_BIAS = 90;
+                        const NEXT_SENTENCE_BIAS = 120;
 
-                        // Phase 4: Adaptive Vertical Tolerance (larger at bottom)
                         const screenHeight = window.innerHeight;
-                        const verticalToleranceMultiplier = y > screenHeight * 0.65 ? 1.6 : 1.0;
-                        const MAX_VERTICAL_DISTANCE = 180 * verticalToleranceMultiplier;
+                        const isBottomRegion = y > screenHeight * 0.7;
+                        const isTopRegion = y < screenHeight * 0.3;
+
+                        const verticalToleranceMultiplier = (isBottomRegion || isTopRegion) ? 2.5 : 1.2;
+                        const MAX_VERTICAL_DISTANCE = 240 * verticalToleranceMultiplier;
+
+                        let verticalBias = 0;
+                        if (isBottomRegion) {
+                            verticalBias = -70 * ((y - screenHeight * 0.7) / (screenHeight * 0.3));
+                        } else if (isTopRegion) {
+                            verticalBias = 40 * ((screenHeight * 0.3 - y) / (screenHeight * 0.3));
+                        }
+
+                        const adjustedY = y + verticalBias;
 
                         const currentSentence = sentenceRectsRef.current.find(s => s.id === lastUpdateIdRef.current);
 
@@ -137,19 +148,19 @@ export default function EyeTrack({ onGazeUpdate }: EyeTrackProps) {
                             const centerX = rect.left + rect.width / 2;
                             const centerY = rect.top + rect.height / 2;
 
-                            const dy = Math.abs(y - centerY);
+                            const dy = Math.abs(adjustedY - centerY);
                             const dx = Math.abs(x - centerX);
 
                             if (dy < MAX_VERTICAL_DISTANCE && dx < 500) {
                                 let distance = dy;
 
-                                // Hysteresis & Prediction Logic
                                 if (id === lastUpdateIdRef.current) {
                                     distance -= STICKY_BIAS;
                                 } else if (currentSentence && order === currentSentence.order + 1) {
-                                    // Prediction: Next sentence in order is more likely
                                     distance -= NEXT_SENTENCE_BIAS;
                                 }
+
+                                if (dx > 400) distance += 150;
 
                                 if (distance < minDistance) {
                                     minDistance = distance;
@@ -167,19 +178,15 @@ export default function EyeTrack({ onGazeUpdate }: EyeTrackProps) {
                     let finalX = avgX;
                     let finalY = avgY;
 
-                    // Magnetic Snapping: Snap to sentence center-line if extremely close
                     if (closestRect && isFixatingRef.current) {
                         const rect = closestRect as DOMRect;
                         const rectCenterY = rect.top + rect.height / 2;
-
-                        // Phase 4: Expanded Snapping Zone at bottom
                         const screenHeight = window.innerHeight;
-                        const snapThreshold = rectCenterY > screenHeight * 0.7 ? 70 : 40;
+                        const snapThreshold = (rectCenterY > screenHeight * 0.7 || rectCenterY < screenHeight * 0.3) ? 80 : 40;
 
                         if (Math.abs(avgY - rectCenterY) < snapThreshold) {
-                            finalY = rectCenterY; // Y-snapping
+                            finalY = rectCenterY;
 
-                            // Dynamic Calibration: Gradually adjust drift offset
                             const errorY = rectCenterY - avgY;
                             driftOffsetRef.current.y += errorY * 0.005;
                             const errorX = (rect.left + rect.width / 2) - avgX;
@@ -190,8 +197,22 @@ export default function EyeTrack({ onGazeUpdate }: EyeTrackProps) {
                     setDotPos({ x: finalX, y: finalY });
 
                     if (closestId !== lastUpdateIdRef.current) {
-                        lastUpdateIdRef.current = closestId;
-                        onGazeUpdate?.(closestId);
+                        const DWELL_THRESHOLD = isFixatingRef.current ? 4 : 8;
+
+                        if (closestId === candidateIdRef.current) {
+                            dwellCountRef.current++;
+                            if (dwellCountRef.current >= DWELL_THRESHOLD) {
+                                lastUpdateIdRef.current = closestId;
+                                dwellCountRef.current = 0;
+                                onGazeUpdate?.(closestId);
+                            }
+                        } else {
+                            candidateIdRef.current = closestId;
+                            dwellCountRef.current = 0;
+                        }
+                    } else {
+                        dwellCountRef.current = 0;
+                        candidateIdRef.current = null;
                     }
                 }).begin();
 
