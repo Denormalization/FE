@@ -203,6 +203,22 @@ export async function getMe(): Promise<User> {
   return (await res.json()) as User;
 }
 
+export async function handleRoleRedirection(
+  router: { push: (path: string) => void; replace: (path: string) => void },
+  method: 'push' | 'replace' = 'push'
+): Promise<void> {
+  try {
+    const user = await getMe();
+    if (user.role === 'ADMIN') {
+      router[method]('/admin');
+    } else {
+      router[method]('/home');
+    }
+  } catch {
+    router[method]('/home');
+  }
+}
+
 export async function logout(): Promise<void> {
   const accessToken = getAccessToken();
   if (accessToken) {
@@ -214,7 +230,6 @@ export async function logout(): Promise<void> {
         },
       });
     } catch {
-      // 서버 에러 무시 — 로컬 토큰은 어차피 삭제
     }
   }
   clearTokens();

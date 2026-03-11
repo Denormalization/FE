@@ -5,6 +5,7 @@ import { useRouter, useSearchParams } from 'next/navigation';
 import {
   exchangeCodeForToken,
   setTokens,
+  handleRoleRedirection,
   type OAuthProvider,
 } from '@/lib/auth';
 
@@ -28,19 +29,7 @@ function CallbackContent() {
     exchangeCodeForToken(provider, code)
       .then(async ({ accessToken, refreshToken }) => {
         setTokens(accessToken, refreshToken);
-        try {
-          // getMe는 lib/auth.ts에 지금 막 추가했으므로 여기서도 사용 가능해야 합니다.
-          // 하지만 callback/page.tsx에는 getMe가 import 되어있지 않을 수 있습니다.
-          const { getMe } = await import('@/lib/auth');
-          const user = await getMe();
-          if (user.role === 'ADMIN') {
-            router.replace('/admin');
-          } else {
-            router.replace('/home');
-          }
-        } catch {
-          router.replace('/home');
-        }
+        handleRoleRedirection(router, 'replace');
       })
       .catch((err) => {
         const message =
