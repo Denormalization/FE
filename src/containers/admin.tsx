@@ -17,14 +17,19 @@ export default function Admin() {
         const fetchUser = async () => {
             try {
                 const userData = await getMe();
+                if (userData.role !== 'ADMIN') {
+                    router.replace('/home');
+                    return;
+                }
                 setUser(userData);
             } catch {
+                router.replace('/');
             } finally {
                 setIsLoading(false);
             }
         };
         fetchUser();
-    }, []);
+    }, [router]);
 
     const handleLogout = async () => {
         await logout();
