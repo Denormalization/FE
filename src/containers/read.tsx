@@ -5,6 +5,7 @@ import { useRouter } from 'next/navigation';
 import { useBook } from '@/context/bookContext';
 import { POEM_TEXT } from '@/mock/read';
 import EyeTrack from '@/components/layout/eyeTrack';
+import { fetchChapterContent } from '@/services/books';
 
 const PageContent = ({
     text,
@@ -129,6 +130,44 @@ export default function Read() {
             }
         }
     };
+    const { setBookContent, readingText, setReadingText } = useBook();
+    const [loaded, setLoaded] = useState(false);
+
+    useEffect(() => {
+        if (readingText) {
+            setBookContent(
+                <PageContent text={readingText} />,
+                <PageContent text={readingText} delay={1200} />
+            );
+            setLoaded(true);
+            return;
+        }
+
+        const raw = localStorage.getItem('lastRead');
+        if (raw) {
+            try {
+                const { isbn, chapterId, title } = JSON.parse(raw);
+                fetchChapterContent(isbn, chapterId)
+                    .then((data) => {
+                        setReadingText(data.content, title);
+                        setBookContent(
+                            <PageContent text={data.content} />,
+                            <PageContent text={data.content} delay={1200} />
+                        );
+                        setLoaded(true);
+                    })
+                    .catch(() => {
+                        setLoaded(true);
+                    });
+            } catch {
+                setLoaded(true);
+            }
+        } else {
+            setLoaded(true);
+        }
+    }, [setBookContent, readingText, setReadingText]);
+
+    if (!loaded) return null;
 
     return (
         <div className="absolute inset-0 pointer-events-none">

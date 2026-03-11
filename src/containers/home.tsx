@@ -1,15 +1,15 @@
 'use client';
 
+import { useState, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
 import { useBook } from '@/context/bookContext';
-import { BookData, BOOKS } from '@/mock/home';
+import { BookItem } from '@/services/books';
 
-const BookCard = ({ book }: { book: BookData }) => {
+const BookCard = ({ book }: { book: BookItem }) => {
     const router = useRouter();
-    const { triggerFlip } = useBook();
 
     const handleClick = () => {
-        router.push(`/bookDetail?id=${book.id}`);
+        router.push(`/bookDetail?isbn=${book.isbn}`);
     };
 
     return (
@@ -34,9 +34,17 @@ const BookCard = ({ book }: { book: BookData }) => {
                     group-hover:shadow-md
                 "
             >
-                <div className="px-4 text-center text-sm text-gray-500 leading-relaxed">
-                    {book.title}
-                </div>
+                {book.coverUrl ? (
+                    <img
+                        src={book.coverUrl}
+                        alt={book.title}
+                        className="w-full h-full object-cover"
+                    />
+                ) : (
+                    <div className="px-4 text-center text-sm text-gray-500 leading-relaxed">
+                        {book.title}
+                    </div>
+                )}
             </div>
 
             <div className="text-center">
@@ -44,24 +52,58 @@ const BookCard = ({ book }: { book: BookData }) => {
                     {book.title}
                 </h3>
                 <p className="text-xs text-gray-500">
-                    {book.author}
+                    {book.authors.join(', ')}
                 </p>
             </div>
         </div>
     );
 };
 
-export function LeftHomeContent({
-    searchTerm,
-    onSearchChange,
-    books
-}: {
-    searchTerm: string;
-    onSearchChange: (value: string) => void;
-    books: BookData[];
-}) {
+function SearchInput({ onSearchChange }: { onSearchChange: (value: string) => void }) {
+    const [value, setValue] = useState('');
+
+    const handleChange = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
+        setValue(e.target.value);
+        onSearchChange(e.target.value);
+    }, [onSearchChange]);
+
     return (
-        <div className="flex h-full w-full flex-col px-24">
+        <input
+            type="text"
+            placeholder="책의 이름을 검색하세요"
+            value={value}
+            onChange={handleChange}
+            className="
+                w-full bg-transparent
+                text-lg text-gray-700
+                placeholder:text-gray-400
+                outline-none
+                pointer-events-auto
+            "
+        />
+    );
+}
+
+export function LeftHomeContent({
+    books,
+    isLoading
+}: {
+    books: BookItem[];
+    isLoading?: boolean;
+}) {
+    const [searchTerm, setSearchTerm] = useState('');
+
+    const filtered = searchTerm
+        ? books.filter(book =>
+            book.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
+            book.authors.some(a => a.toLowerCase().includes(searchTerm.toLowerCase()))
+        )
+        : books;
+
+    const displayBooks = filtered.slice(0, 4);
+
+    return (
+        <div className="flex h-full w-full flex-col px-24 pointer-events-auto">
             <div className="mt-6 mb-5 flex items-center gap-4">
 
                 <img
@@ -69,37 +111,38 @@ export function LeftHomeContent({
                     alt="search"
                     className="h-7 w-6 opacity-50"
                 />
-                <input
-                    type="text"
-                    placeholder="책의 이름을 검색하세요"
-                    value={searchTerm}
-                    onChange={(e) => onSearchChange(e.target.value)}
-                    className="
-                        w-full bg-transparent
-                        text-lg text-gray-700
-                        placeholder:text-gray-400
-                        outline-none
-                    "
-                />
+                <SearchInput onSearchChange={setSearchTerm} />
             </div>
 
-            <div className="grid grid-cols-2 gap-x-20 gap-y-6">
-                {books.map(book => (
-                    <BookCard key={book.id} book={book} />
-                ))}
-            </div>
+            {isLoading ? (
+                <div className="flex flex-1 items-center justify-center">
+                    <p className="text-gray-400">불러오는 중...</p>
+                </div>
+            ) : displayBooks.length === 0 ? (
+                <div className="flex flex-1 items-center justify-center">
+                    <p className="text-gray-400">책이 없습니다.</p>
+                </div>
+            ) : (
+                <div className="grid grid-cols-2 gap-x-20 gap-y-6">
+                    {displayBooks.map(book => (
+                        <BookCard key={book.isbn} book={book} />
+                    ))}
+                </div>
+            )}
         </div>
     );
 }
 
-export function RightHomeContent({ books }: { books: BookData[] }) {
+export function RightHomeContent({ books }: { books: BookItem[] }) {
     return (
         <div className="flex h-full w-full flex-col px-24 py-[4.5rem]">
-            <div className="grid grid-cols-2 gap-x-20 gap-y-6">
-                {books.map(book => (
-                    <BookCard key={book.id} book={book} />
-                ))}
-            </div>
+            {books.length > 0 ? (
+                <div className="grid grid-cols-2 gap-x-20 gap-y-6">
+                    {books.map(book => (
+                        <BookCard key={book.isbn} book={book} />
+                    ))}
+                </div>
+            ) : null}
         </div>
     );
 }
