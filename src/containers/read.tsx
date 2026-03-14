@@ -6,6 +6,7 @@ import { useBook } from '@/context/bookContext';
 import { POEM_TEXT } from '@/mock/read';
 import EyeTrack from '@/components/layout/eyeTrack';
 import { fetchChapterContent } from '@/services/books';
+import { recordGazeEvent } from '@/services/gaze';
 
 const PageContent = ({
     text,
@@ -72,11 +73,14 @@ const PageContent = ({
 
 export default function Read() {
     const router = useRouter();
-    const { setBookContent, setActiveGazeId } = useBook();
+    const { setBookContent, setActiveGazeId, readingText, setReadingText } = useBook();
     const [currentPage, setCurrentPage] = useState(0);
+    const [loaded, setLoaded] = useState(false);
     const isFlippingRef = useRef(false);
     const stickyIdRef = useRef<string | null>(null);
     const stickyTimeoutRef = useRef<any>(null);
+    const gazeStartTimeRef = useRef<number | null>(null);
+    const currentBookInfoRef = useRef<{ isbn: number; chapterId: number }>({ isbn: 1, chapterId: 1 });
 
     const pages = useMemo(() => {
         const allSentences = POEM_TEXT.split(/(?<=[.!?])\s+|(?<=\n)/).filter(s => s.trim().length > 0);
@@ -99,14 +103,66 @@ export default function Read() {
     }, [setBookContent, currentPage, pages]);
 
     const handleGazeUpdate = (id: string | null) => {
+        const now = Date.now();
+        const bookInfo = currentBookInfoRef.current;
+        
+        if (stickyIdRef.current && stickyIdRef.current !== id) {
+            if (gazeStartTimeRef.current && bookInfo) {
+                const dwellTime = now - gazeStartTimeRef.current;
+                
+                if (dwellTime >= 100) {
+                    const el = document.getElementById(stickyIdRef.current);
+                    if (el) {
+                        const text = el.textContent?.trim() || el.innerText?.trim();
+                        if (text) {
+                            recordGazeEvent({
+                                bookId: bookInfo.isbn,
+                                chapterId: bookInfo.chapterId,
+                                text,
+                                dwellTime,
+                                timestamp: new Date().toISOString()
+                            }).catch(err => console.error('Gaze event error:', err));
+                        }
+                    }
+                }
+            }
+            gazeStartTimeRef.current = null;
+        }
+
         if (id) {
-            if (stickyTimeoutRef.current) clearTimeout(stickyTimeoutRef.current);
-            stickyIdRef.current = id;
-            setActiveGazeId(id);
+            if (stickyTimeoutRef.current) {
+                clearTimeout(stickyTimeoutRef.current);
+                stickyTimeoutRef.current = null;
+            }
+
+            if (stickyIdRef.current !== id) {
+                gazeStartTimeRef.current = now;
+                stickyIdRef.current = id;
+                setActiveGazeId(id);
+            }
         } else {
-            if (!stickyTimeoutRef.current) {
+            if (!stickyTimeoutRef.current && stickyIdRef.current) {
                 stickyTimeoutRef.current = setTimeout(() => {
+                    const finalDwellTime = Date.now() - (gazeStartTimeRef.current || now);
+                    
+                    if (gazeStartTimeRef.current && bookInfo && finalDwellTime >= 100 && stickyIdRef.current) {
+                        const el = document.getElementById(stickyIdRef.current);
+                        if (el) {
+                            const text = el.textContent?.trim() || el.innerText?.trim();
+                            if (text) {
+                                recordGazeEvent({
+                                    bookId: bookInfo.isbn,
+                                    chapterId: bookInfo.chapterId,
+                                    text,
+                                    dwellTime: finalDwellTime,
+                                    timestamp: new Date().toISOString()
+                                }).catch(err => console.error('Gaze event error:', err));
+                            }
+                        }
+                    }
+                    
                     setActiveGazeId(null);
+                    gazeStartTimeRef.current = null;
                     stickyIdRef.current = null;
                     stickyTimeoutRef.current = null;
                 }, 150);
@@ -130,39 +186,43 @@ export default function Read() {
             }
         }
     };
-    const { setBookContent, readingText, setReadingText } = useBook();
-    const [loaded, setLoaded] = useState(false);
-
     useEffect(() => {
-        if (readingText) {
-            setBookContent(
-                <PageContent text={readingText} />,
-                <PageContent text={readingText} delay={1200} />
-            );
-            setLoaded(true);
-            return;
-        }
-
         const raw = localStorage.getItem('lastRead');
         if (raw) {
             try {
                 const { isbn, chapterId, title } = JSON.parse(raw);
-                fetchChapterContent(isbn, chapterId)
-                    .then((data) => {
-                        setReadingText(data.content, title);
-                        setBookContent(
-                            <PageContent text={data.content} />,
-                            <PageContent text={data.content} delay={1200} />
-                        );
-                        setLoaded(true);
-                    })
-                    .catch(() => {
-                        setLoaded(true);
-                    });
+                currentBookInfoRef.current = { isbn: Number(isbn), chapterId: Number(chapterId) };
+
+                if (!readingText) {
+                    fetchChapterContent(isbn, chapterId)
+                        .then((data) => {
+                            setReadingText(data.content, title);
+                            setBookContent(
+                                <PageContent text={data.content} idPrefix="left" />,
+                                <PageContent text={data.content} delay={1200} idPrefix="right" />
+                            );
+                            setLoaded(true);
+                        })
+                        .catch(() => {
+                            setLoaded(true);
+                        });
+                } else {
+                    setBookContent(
+                        <PageContent text={readingText} idPrefix="left" />,
+                        <PageContent text={readingText} delay={1200} idPrefix="right" />
+                    );
+                    setLoaded(true);
+                }
             } catch {
                 setLoaded(true);
             }
         } else {
+            if (readingText) {
+                setBookContent(
+                    <PageContent text={readingText} idPrefix="left" />,
+                    <PageContent text={readingText} delay={1200} idPrefix="right" />
+                );
+            }
             setLoaded(true);
         }
     }, [setBookContent, readingText, setReadingText]);
