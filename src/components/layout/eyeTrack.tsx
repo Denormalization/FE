@@ -14,8 +14,11 @@ export default function EyeTrack({ onGazeUpdate }: EyeTrackProps) {
     const dwellCountRef = useRef<number>(0);
     const candidateIdRef = useRef<string | null>(null);
     const driftOffsetRef = useRef({ x: 0, y: 0 });
+    const latestOnGazeUpdateRef = useRef(onGazeUpdate);
 
-    const MAX_BUFFER_SIZE = 40;
+    useEffect(() => {
+        latestOnGazeUpdateRef.current = onGazeUpdate;
+    }, [onGazeUpdate]);
 
     useEffect(() => {
         if (initializedRef.current) return;
@@ -23,9 +26,7 @@ export default function EyeTrack({ onGazeUpdate }: EyeTrackProps) {
 
         if (typeof window !== 'undefined') {
             if (!(window as any).WebGazerConfig) {
-                (window as any).WebGazerConfig = {
-                    basePath: '/mediapipe/face_mesh/'
-                };
+                (window as any).WebGazerConfig = {};
             }
         }
 
@@ -204,7 +205,7 @@ export default function EyeTrack({ onGazeUpdate }: EyeTrackProps) {
                             if (dwellCountRef.current >= DWELL_THRESHOLD) {
                                 lastUpdateIdRef.current = closestId;
                                 dwellCountRef.current = 0;
-                                onGazeUpdate?.(closestId);
+                                latestOnGazeUpdateRef.current?.(closestId);
                             }
                         } else {
                             candidateIdRef.current = closestId;
