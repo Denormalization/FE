@@ -228,7 +228,6 @@ export default function EyeTrack({ onGazeUpdate }: EyeTrackProps) {
                     window.webgazer.params.showFaceFeedbackBox = false;
                 }
             } catch (err) {
-                console.error('WebGazer initialization error:', err);
             }
 
             return () => {
@@ -264,7 +263,6 @@ export default function EyeTrack({ onGazeUpdate }: EyeTrackProps) {
                             if (el) el.remove();
                         });
                 } catch (e) {
-                    console.error('WebGazer cleanup error:', e);
                 }
             }
         };

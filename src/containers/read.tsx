@@ -73,7 +73,7 @@ const PageContent = ({
 
 export default function Read() {
     const router = useRouter();
-    const { setBookContent, setActiveGazeId, readingText, setReadingText } = useBook();
+    const { setBookContent, setActiveGazeId, readingText, setReadingText, setOverlayContent } = useBook();
     const [currentPage, setCurrentPage] = useState(0);
     const [loaded, setLoaded] = useState(false);
     const isFlippingRef = useRef(false);
@@ -121,7 +121,7 @@ export default function Read() {
                                 text,
                                 dwellTime,
                                 timestamp: new Date().toISOString()
-                            }).catch(err => console.error('Gaze event error:', err));
+                            }).catch(() => {});
                         }
                     }
                 }
@@ -156,7 +156,7 @@ export default function Read() {
                                     text,
                                     dwellTime: finalDwellTime,
                                     timestamp: new Date().toISOString()
-                                }).catch(err => console.error('Gaze event error:', err));
+                                }).catch(() => {});
                             }
                         }
                     }
@@ -227,12 +227,15 @@ export default function Read() {
         }
     }, [setBookContent, readingText, setReadingText]);
 
+    useEffect(() => {
+        setOverlayContent(<EyeTrack onGazeUpdate={handleGazeUpdate} />);
+        return () => setOverlayContent(null);
+    }, [handleGazeUpdate, setOverlayContent]);
+
     if (!loaded) return null;
 
     return (
         <div className="absolute inset-0 pointer-events-none">
-            <EyeTrack onGazeUpdate={handleGazeUpdate} />
-
             <div className="relative w-[80rem] h-[50rem]">
                 <div className="absolute -right-6 bottom-0 flex flex-col gap-2 pointer-events-auto">
                     <button
