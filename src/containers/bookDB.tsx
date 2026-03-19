@@ -9,10 +9,11 @@ import { fetchKeywordGraph } from '@/services/library';
 
 export default function BookDB() {
     const simulationRef = useRef<d3.Simulation<GraphNode, undefined> | null>(null);
+    const isFirstRender = useRef(true);
     const [hoveredNode, setHoveredNode] = useState<GraphNode | null>(null);
     const [tooltipPos, setTooltipPos] = useState({ x: 0, y: 0 });
     const [graphData, setGraphData] = useState<GraphData | null>(null);
-    const { setBookContent, setOverlayContent } = useBook();
+    const { setBookContent, updateBookContent, setOverlayContent } = useBook();
 
     useEffect(() => {
         fetchKeywordGraph()
@@ -189,10 +190,13 @@ export default function BookDB() {
     }, [hoveredNode, tooltipPos, setOverlayContent]);
 
     useEffect(() => {
-        setBookContent(
+        const leftContent = (
             <div className="relative h-full w-full bg-[#FAFAFA]/50 overflow-visible">
                 <svg ref={initD3} className="w-full h-full" />
-            </div>,
+            </div>
+        );
+
+        const rightContent = (
             <div className="flex flex-col items-center justify-center h-full px-12 text-center">
                 <h2 className="text-4xl font-extrabold text-gray-800 mb-6 tracking-tight">
                     나만의<br />지식창고
@@ -205,11 +209,24 @@ export default function BookDB() {
                 </p>
             </div>
         );
+
+        if (isFirstRender.current) {
+            setBookContent(leftContent, rightContent);
+            isFirstRender.current = false;
+        } else {
+            updateBookContent(leftContent, rightContent);
+        }
+
         return () => {
             if (simulationRef.current) simulationRef.current.stop();
             setOverlayContent(null);
         };
-    }, [initD3, setBookContent, setOverlayContent]);
+    }, [
+        initD3,
+        setBookContent,
+        updateBookContent,
+        setOverlayContent,
+    ]);
 
     return null;
 }

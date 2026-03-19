@@ -5,7 +5,7 @@ import { usePathname } from 'next/navigation';
 import Navigation from './navigation';
 import { useBook } from '@/context/bookContext';
 
-export default function Book() {
+export function Book() {
     const { leftContent, rightContent, overlayContent, flipKey, prevContent } = useBook();
     const pathname = usePathname();
     const [isFlipping, setIsFlipping] = useState(false);
@@ -118,3 +118,5 @@ export default function Book() {
         </div>
     );
 }
+
+export default Book;
