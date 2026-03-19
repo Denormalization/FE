@@ -15,6 +15,8 @@ export default function EyeTrack({ onGazeUpdate }: EyeTrackProps) {
     const candidateIdRef = useRef<string | null>(null);
     const driftOffsetRef = useRef({ x: 0, y: 0 });
     const latestOnGazeUpdateRef = useRef(onGazeUpdate);
+    const [trail, setTrail] = useState<{ x: number; y: number; id: number }[]>([]);
+    const lastTrailPosRef = useRef({ x: 0, y: 0 });
 
     useEffect(() => {
         latestOnGazeUpdateRef.current = onGazeUpdate;
@@ -78,12 +80,22 @@ export default function EyeTrack({ onGazeUpdate }: EyeTrackProps) {
                     let rawY = data.y + driftOffsetRef.current.y;
 
                     const screenHeight = window.innerHeight;
+                    const screenWidth = window.innerWidth;
+
                     if (rawY > screenHeight * 0.7) {
                         const bottomIntensity = (rawY - screenHeight * 0.7) / (screenHeight * 0.3);
-                        rawY += 35 * bottomIntensity;
+                        rawY += 65 * bottomIntensity;
                     } else if (rawY < screenHeight * 0.3) {
                         const topIntensity = (screenHeight * 0.3 - rawY) / (screenHeight * 0.3);
-                        rawY -= 25 * topIntensity;
+                        rawY -= 85 * topIntensity;
+                    }
+
+                    if (rawX > screenWidth * 0.5) {
+                        const rightIntensity = (rawX - screenWidth * 0.5) / (screenWidth * 0.5);
+                        rawX += 90 * rightIntensity;
+                    } else if (rawX < screenWidth * 0.5) {
+                        const leftIntensity = (screenWidth * 0.5 - rawX) / (screenWidth * 0.5);
+                        rawX -= 220 * leftIntensity;
                     }
 
                     const lastAvg =
@@ -136,9 +148,9 @@ export default function EyeTrack({ onGazeUpdate }: EyeTrackProps) {
 
                         let verticalBias = 0;
                         if (isBottomRegion) {
-                            verticalBias = -70 * ((y - screenHeight * 0.7) / (screenHeight * 0.3));
+                            verticalBias = -120 * ((y - screenHeight * 0.7) / (screenHeight * 0.3));
                         } else if (isTopRegion) {
-                            verticalBias = 40 * ((screenHeight * 0.3 - y) / (screenHeight * 0.3));
+                            verticalBias = 150 * ((screenHeight * 0.3 - y) / (screenHeight * 0.3));
                         }
 
                         const adjustedY = y + verticalBias;
@@ -161,7 +173,18 @@ export default function EyeTrack({ onGazeUpdate }: EyeTrackProps) {
                                     distance -= NEXT_SENTENCE_BIAS;
                                 }
 
-                                if (dx > 400) distance += 150;
+                                const isFirstSentence = id.endsWith('-sentence-0');
+                                const sidePrefix = id.split('-')[0];
+                                const maxIndexForSide = Math.max(...sentenceRectsRef.current
+                                    .filter(s => s.id.startsWith(sidePrefix))
+                                    .map(s => parseInt(s.id.split('-').pop() || '0')));
+                                const isLastSentence = id.endsWith(`-sentence-${maxIndexForSide}`);
+
+                                if (isFirstSentence || isLastSentence) {
+                                    distance -= 80;
+                                }
+
+                                if (dx > 350) distance += 300;
 
                                 if (distance < minDistance) {
                                     minDistance = distance;
@@ -179,23 +202,42 @@ export default function EyeTrack({ onGazeUpdate }: EyeTrackProps) {
                     let finalX = avgX;
                     let finalY = avgY;
 
-                    if (closestRect && isFixatingRef.current) {
+                    if (closestRect) {
                         const rect = closestRect as DOMRect;
+                        const rectCenterX = rect.left + rect.width / 2;
                         const rectCenterY = rect.top + rect.height / 2;
-                        const screenHeight = window.innerHeight;
-                        const snapThreshold = (rectCenterY > screenHeight * 0.7 || rectCenterY < screenHeight * 0.3) ? 80 : 40;
+                        
+                        const yDiff = Math.abs(avgY - rectCenterY);
+                        const xDiff = Math.abs(avgX - rectCenterX);
+                        
+                        if (yDiff < 180) {
+                            const snapFactorY = isFixatingRef.current ? 0.85 : 0.6;
+                            finalY = avgY + (rectCenterY - avgY) * snapFactorY;
 
-                        if (Math.abs(avgY - rectCenterY) < snapThreshold) {
-                            finalY = rectCenterY;
+                            if (xDiff < 500) {
+                                const snapFactorX = isFixatingRef.current ? 0.75 : 0.45;
+                                finalX = avgX + (rectCenterX - avgX) * snapFactorX;
+
+                                const errorX = rectCenterX - avgX;
+                                driftOffsetRef.current.x += errorX * 0.005;
+                            }
 
                             const errorY = rectCenterY - avgY;
-                            driftOffsetRef.current.y += errorY * 0.005;
-                            const errorX = (rect.left + rect.width / 2) - avgX;
-                            driftOffsetRef.current.x += errorX * 0.002;
+                            driftOffsetRef.current.y += errorY * 0.01;
                         }
                     }
 
                     setDotPos({ x: finalX, y: finalY });
+
+                    if (Math.hypot(finalX - lastTrailPosRef.current.x, finalY - lastTrailPosRef.current.y) > 30) {
+                        const newId = Date.now();
+                        setTrail(prev => [...prev.slice(-15), { x: finalX, y: finalY, id: newId }]);
+                        lastTrailPosRef.current = { x: finalX, y: finalY };
+                        
+                        setTimeout(() => {
+                            setTrail(prev => prev.filter(t => t.id !== newId));
+                        }, 1000);
+                    }
 
                     if (closestId !== lastUpdateIdRef.current) {
                         const DWELL_THRESHOLD = isFixatingRef.current ? 4 : 8;
@@ -271,37 +313,50 @@ export default function EyeTrack({ onGazeUpdate }: EyeTrackProps) {
     return (
         <>
             <div className="fixed inset-0 pointer-events-none z-[2147483647]">
+                {trail.map((t) => (
+                    <div
+                        key={t.id}
+                        className="absolute rounded-full bg-[#BCE68F]/8 trail-blob blur-[8px]"
+                        style={{
+                            left: t.x,
+                            top: t.y,
+                            width: '60px',
+                            height: '60px',
+                            transform: 'translate(-50%, -50%)',
+                            boxShadow: '0 0 20px rgba(188, 230, 143, 0.15)',
+                        }}
+                    />
+                ))}
                 <div
-                    className="absolute rounded-full border-2 border-red-500/40 bg-red-500/10 flex items-center justify-center transition-[left,top] duration-100 ease-out"
+                    className="absolute rounded-[40%_60%_70%_30%/40%_50%_60%_50%] border-[2.5px] border-[#BCE68F]/70 bg-[#BCE68F]/25 backdrop-blur-[2px] transition-all duration-300 cubic-bezier(0.175, 0.885, 0.32, 1.275)"
                     style={{
                         left: dotPos.x,
                         top: dotPos.y,
-                        width: '32px',
-                        height: '32px',
-                        transform: 'translate(-50%, -50%)'
+                        width: '75px',
+                        height: '75px',
+                        transform: 'translate(-50%, -50%)',
+                        boxShadow: '0 0 30px rgba(188, 230, 143, 0.45), inset 0 0 20px rgba(188, 230, 143, 0.25)',
+                        animation: 'blob-morph 4s ease-in-out infinite alternate',
+                        filter: 'blur(0.5px)'
                     }}
-                >
-                    <div className="w-2.5 h-2.5 bg-[#ff3333] rounded-full ring-1 ring-white shadow-[0_0_10px_#ff3333]" />
-                    <div className="pulse-ring absolute inset-0 border-[2.5px] border-[#ff3333] rounded-full" />
-                </div>
+                />
             </div>
 
             <style jsx global>{`
-                @keyframes pulse-animation {
-                    0% {
-                        transform: scale(1);
-                        opacity: 0.8;
-                    }
-                    100% {
-                        transform: scale(2.2);
-                        opacity: 0;
-                    }
+                @keyframes fade-out {
+                    0% { opacity: 0.5; transform: translate(-50%, -50%) scale(1.1); filter: blur(4px); }
+                    100% { opacity: 0; transform: translate(-50%, -50%) scale(0.2); filter: blur(12px); }
                 }
 
-                .pulse-ring {
-                    animation: pulse-animation 2s
-                        cubic-bezier(0.4, 0, 0.6, 1)
-                        infinite;
+                .trail-blob {
+                    animation: fade-out 1.2s cubic-bezier(0.23, 1, 0.32, 1) forwards;
+                }
+
+                @keyframes blob-morph {
+                    0% { border-radius: 40% 60% 70% 30% / 40% 50% 60% 50%; transform: translate(-50%, -50%) scale(1) rotate(0deg); }
+                    33% { border-radius: 70% 30% 50% 50% / 30% 30% 70% 70%; transform: translate(-50%, -50%) scale(1.05) rotate(15deg); }
+                    66% { border-radius: 30% 70% 70% 30% / 50% 40% 30% 60%; transform: translate(-50%, -50%) scale(0.95) rotate(-15deg); }
+                    100% { border-radius: 40% 60% 70% 30% / 40% 50% 60% 50%; transform: translate(-50%, -50%) scale(1) rotate(0deg); }
                 }
 
                 #webgazerVideoContainer,

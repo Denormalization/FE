@@ -105,11 +105,11 @@ export default function Read() {
     const handleGazeUpdate = (id: string | null) => {
         const now = Date.now();
         const bookInfo = currentBookInfoRef.current;
-        
+
         if (stickyIdRef.current && stickyIdRef.current !== id) {
             if (gazeStartTimeRef.current && bookInfo) {
                 const dwellTime = now - gazeStartTimeRef.current;
-                
+
                 if (dwellTime >= 100) {
                     const el = document.getElementById(stickyIdRef.current);
                     if (el) {
@@ -121,7 +121,7 @@ export default function Read() {
                                 text,
                                 dwellTime,
                                 timestamp: new Date().toISOString()
-                            }).catch(() => {});
+                            }).catch(() => { });
                         }
                     }
                 }
@@ -144,7 +144,7 @@ export default function Read() {
             if (!stickyTimeoutRef.current && stickyIdRef.current) {
                 stickyTimeoutRef.current = setTimeout(() => {
                     const finalDwellTime = Date.now() - (gazeStartTimeRef.current || now);
-                    
+
                     if (gazeStartTimeRef.current && bookInfo && finalDwellTime >= 100 && stickyIdRef.current) {
                         const el = document.getElementById(stickyIdRef.current);
                         if (el) {
@@ -156,11 +156,11 @@ export default function Read() {
                                     text,
                                     dwellTime: finalDwellTime,
                                     timestamp: new Date().toISOString()
-                                }).catch(() => {});
+                                }).catch(() => { });
                             }
                         }
                     }
-                    
+
                     setActiveGazeId(null);
                     gazeStartTimeRef.current = null;
                     stickyIdRef.current = null;
