@@ -2,18 +2,27 @@
 
 import React, { useEffect, useCallback, useState, useRef } from 'react';
 import * as d3 from 'd3';
-import { KNOWLEDGE_GRAPH_DATA } from '@/mock/graph';
-import { GraphNode, GraphLink } from '@/types/graph';
+import { toast } from 'react-toastify';
+import { GraphNode, GraphLink, GraphData } from '@/types/graph';
 import { useBook } from '@/context/bookContext';
+import { fetchKeywordGraph } from '@/services/library';
 
 export default function BookDB() {
     const simulationRef = useRef<d3.Simulation<GraphNode, undefined> | null>(null);
+    const isFirstRender = useRef(true);
     const [hoveredNode, setHoveredNode] = useState<GraphNode | null>(null);
     const [tooltipPos, setTooltipPos] = useState({ x: 0, y: 0 });
-    const { setBookContent, setOverlayContent } = useBook();
+    const [graphData, setGraphData] = useState<GraphData | null>(null);
+    const { setBookContent, updateBookContent, setOverlayContent } = useBook();
+
+    useEffect(() => {
+        fetchKeywordGraph()
+            .then(setGraphData)
+            .catch((err) => toast.error(err instanceof Error ? err.message : '그래프 로드 실패'));
+    }, []);
 
     const initD3 = useCallback((svgElement: SVGSVGElement) => {
-        if (!svgElement) return;
+        if (!svgElement || !graphData) return;
 
         const width = 1200;
         const height = 800;
@@ -36,8 +45,8 @@ export default function BookDB() {
 
         if (simulationRef.current) simulationRef.current.stop();
 
-        const simulation = d3.forceSimulation<GraphNode>(KNOWLEDGE_GRAPH_DATA.nodes)
-            .force('link', d3.forceLink<GraphNode, GraphLink>(KNOWLEDGE_GRAPH_DATA.links)
+        const simulation = d3.forceSimulation<GraphNode>(graphData.nodes)
+            .force('link', d3.forceLink<GraphNode, GraphLink>(graphData.links)
                 .id(d => d.id)
                 .distance(d => ((d.source as GraphNode).type === 'main' ? 300 : 150)))
             .force('charge', d3.forceManyBody().strength(-1200))
@@ -48,7 +57,7 @@ export default function BookDB() {
 
         const link = g.append('g')
             .selectAll('line')
-            .data(KNOWLEDGE_GRAPH_DATA.links)
+            .data(graphData.links)
             .join('line')
             .attr('stroke', '#E5E7EB')
             .attr('stroke-opacity', 0.8)
@@ -60,7 +69,7 @@ export default function BookDB() {
 
         const node = g.append('g')
             .selectAll('g')
-            .data(KNOWLEDGE_GRAPH_DATA.nodes)
+            .data(graphData.nodes)
             .join('g')
             .attr('class', 'opacity-0 scale-0')
             .call(
@@ -110,7 +119,7 @@ export default function BookDB() {
                     );
 
                 node.attr('opacity', (n: any) =>
-                    n.id === d.id || KNOWLEDGE_GRAPH_DATA.links.some(l =>
+                    n.id === d.id || graphData.links.some(l =>
                         (l.source as any).id === d.id && (l.target as any).id === n.id ||
                         (l.target as any).id === d.id && (l.source as any).id === n.id
                     ) ? 1 : 0.5
@@ -154,7 +163,7 @@ export default function BookDB() {
             node.attr('transform', d => `translate(${(d as any).x}, ${(d as any).y})`);
         });
 
-        const mainNodes = KNOWLEDGE_GRAPH_DATA.nodes.filter(n => n.type === 'main');
+        const mainNodes = graphData.nodes.filter(n => n.type === 'main');
         const mainNodeRadius = 150;
 
         mainNodes.forEach((node, index) => {
@@ -162,7 +171,7 @@ export default function BookDB() {
             node.fx = width / 2 + mainNodeRadius * Math.cos(angle);
             node.fy = height / 2 + mainNodeRadius * Math.sin(angle);
         });
-    }, [setOverlayContent]);
+    }, [graphData, setOverlayContent]);
 
     useEffect(() => {
         if (hoveredNode) {
@@ -181,10 +190,13 @@ export default function BookDB() {
     }, [hoveredNode, tooltipPos, setOverlayContent]);
 
     useEffect(() => {
-        setBookContent(
+        const leftContent = (
             <div className="relative h-full w-full bg-[#FAFAFA]/50 overflow-visible">
                 <svg ref={initD3} className="w-full h-full" />
-            </div>,
+            </div>
+        );
+
+        const rightContent = (
             <div className="flex flex-col items-center justify-center h-full px-12 text-center">
                 <h2 className="text-4xl font-extrabold text-gray-800 mb-6 tracking-tight">
                     나만의<br />지식창고
@@ -197,11 +209,24 @@ export default function BookDB() {
                 </p>
             </div>
         );
+
+        if (isFirstRender.current) {
+            setBookContent(leftContent, rightContent);
+            isFirstRender.current = false;
+        } else {
+            updateBookContent(leftContent, rightContent);
+        }
+
         return () => {
             if (simulationRef.current) simulationRef.current.stop();
             setOverlayContent(null);
         };
-    }, [initD3, setBookContent, setOverlayContent]);
+    }, [
+        initD3,
+        setBookContent,
+        updateBookContent,
+        setOverlayContent,
+    ]);
 
     return null;
 }

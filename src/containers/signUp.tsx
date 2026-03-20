@@ -4,7 +4,6 @@ import { useState, useEffect, useMemo, useRef } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { toast } from 'react-toastify';
-import Book from '../components/ui/book';
 import { useBook } from '@/context/bookContext';
 import { signUp } from '@/lib/auth';
 

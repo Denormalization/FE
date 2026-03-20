@@ -1,7 +1,7 @@
 import { NextResponse } from 'next/server';
 
 const BACKEND_URL =
-  process.env.NEXT_PUBLIC_API_URL ?? 'https://ai-production-e966.up.railway.app';
+  process.env.NEXT_PUBLIC_API_URL ?? 'https://be-production-4099.up.railway.app/';
 
 export async function POST(request: Request) {
   let refreshToken: string;

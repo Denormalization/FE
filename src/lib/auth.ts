@@ -32,15 +32,36 @@ const NAVER_CLIENT_ID = process.env.NEXT_PUBLIC_NAVER_CLIENT_ID ?? '';
 
 const STORAGE_ACCESS = 'dmz_access_token';
 const STORAGE_REFRESH = 'dmz_refresh_token';
+const STORAGE_NAVER_OAUTH_STATE = 'dmz_naver_oauth_state';
 
 function getRedirectUri(): string {
   if (typeof window === 'undefined') return '';
-  return `${window.location.origin}/auth/callback`;
+  return `${window.location.origin}/oauth/callback`;
+}
+
+function createRandomState(): string {
+  if (typeof crypto !== 'undefined' && typeof crypto.randomUUID === 'function') {
+    return crypto.randomUUID();
+  }
+  return Math.random().toString(36).slice(2, 18);
+}
+
+export function saveNaverOAuthState(state: string): void {
+  if (typeof window === 'undefined') return;
+  window.sessionStorage.setItem(STORAGE_NAVER_OAUTH_STATE, state);
+}
+
+export function consumeNaverOAuthState(): string | null {
+  if (typeof window === 'undefined') return null;
+  const state = window.sessionStorage.getItem(STORAGE_NAVER_OAUTH_STATE);
+  if (state) {
+    window.sessionStorage.removeItem(STORAGE_NAVER_OAUTH_STATE);
+  }
+  return state;
 }
 
 export function getOAuthRedirectUrl(provider: OAuthProvider): string {
   const redirectUri = getRedirectUri();
-  const state = provider;
 
   if (provider === 'google') {
     const params = new URLSearchParams({
@@ -48,12 +69,14 @@ export function getOAuthRedirectUrl(provider: OAuthProvider): string {
       redirect_uri: redirectUri,
       response_type: 'code',
       scope: 'openid email profile',
-      state,
+      state: 'google',
     });
     return `https://accounts.google.com/o/oauth2/v2/auth?${params.toString()}`;
   }
 
   if (provider === 'naver') {
+    const state = createRandomState();
+    saveNaverOAuthState(state);
     const params = new URLSearchParams({
       client_id: NAVER_CLIENT_ID,
       redirect_uri: redirectUri,
@@ -102,9 +125,16 @@ const OAUTH_REQUEST_TIMEOUT_MS = 15_000;
 
 export async function exchangeCodeForToken(
   provider: OAuthProvider,
-  authCode: string
+  authCode: string,
+  state?: string
 ): Promise<OAuthTokenResponse> {
-  const url = `${API_URL}/api/v1/auth/oauth/${provider}?authCode=${encodeURIComponent(authCode)}`;
+  const params = new URLSearchParams({
+    authCode,
+  });
+  if (state) {
+    params.set('state', state);
+  }
+  const url = `${API_URL}/api/v1/auth/oauth/${provider}?${params.toString()}`;
   const controller = new AbortController();
   const timeoutId = setTimeout(() => controller.abort(), OAUTH_REQUEST_TIMEOUT_MS);
 
