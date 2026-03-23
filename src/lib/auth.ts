@@ -217,7 +217,7 @@ export async function getMe(): Promise<User> {
     throw new Error('로그인 정보가 없습니다.');
   }
 
-  const url = `${API_URL}/api/v1/auth/me`;
+  const url = `${API_URL}/api/v1/users/me`;
   const res = await fetch(url, {
     method: 'GET',
     headers: {
