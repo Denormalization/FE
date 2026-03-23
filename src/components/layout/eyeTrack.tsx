@@ -50,6 +50,12 @@ export default function EyeTrack({ onGazeUpdate }: EyeTrackProps) {
         const resizeObserver = new ResizeObserver(updateSentenceRects);
         resizeObserver.observe(document.body);
 
+        const getIntensity = (val: number, threshold: number, range: number) => {
+            let t = Math.abs(val - threshold) / range;
+            t = Math.max(0, Math.min(1, t));
+            return t * t * (3 - 2 * t);
+        };
+
         const initWebGazer = () => {
             if (!window.webgazer || (window as any).webgazerInitialized) return;
             (window as any).webgazerInitialized = true;
@@ -62,19 +68,18 @@ export default function EyeTrack({ onGazeUpdate }: EyeTrackProps) {
                     if (!data) return;
 
                     const now = Date.now();
+                    const dt = lastPointRef.current ? now - lastPointRef.current.t : 16;
                     let velocity = 0;
 
-                    if (lastPointRef.current) {
-                        const dt = now - lastPointRef.current.t;
-                        if (dt > 0) {
-                            const dx = data.x - lastPointRef.current.x;
-                            const dy = data.y - lastPointRef.current.y;
-                            velocity = Math.sqrt(dx * dx + dy * dy) / dt;
-                        }
+                    if (lastPointRef.current && dt > 0) {
+                        const dx = data.x - lastPointRef.current.x;
+                        const dy = data.y - lastPointRef.current.y;
+                        velocity = Math.sqrt(dx * dx + dy * dy) / dt;
                     }
 
                     lastPointRef.current = { x: data.x, y: data.y, t: now };
-                    isFixatingRef.current = velocity < 0.25;
+                    const fixationThreshold = isFixatingRef.current ? 0.35 : 0.22;
+                    isFixatingRef.current = velocity < fixationThreshold;
 
                     let rawX = data.x + driftOffsetRef.current.x;
                     let rawY = data.y + driftOffsetRef.current.y;
@@ -82,20 +87,20 @@ export default function EyeTrack({ onGazeUpdate }: EyeTrackProps) {
                     const screenHeight = window.innerHeight;
                     const screenWidth = window.innerWidth;
 
-                    if (rawY > screenHeight * 0.7) {
-                        const bottomIntensity = (rawY - screenHeight * 0.7) / (screenHeight * 0.3);
-                        rawY += 65 * bottomIntensity;
-                    } else if (rawY < screenHeight * 0.3) {
-                        const topIntensity = (screenHeight * 0.3 - rawY) / (screenHeight * 0.3);
-                        rawY -= 85 * topIntensity;
+                    if (rawY > screenHeight * 0.65) {
+                        const intensity = getIntensity(rawY, screenHeight * 0.65, screenHeight * 0.35);
+                        rawY += 80 * intensity;
+                    } else if (rawY < screenHeight * 0.35) {
+                        const intensity = getIntensity(rawY, screenHeight * 0.35, screenHeight * 0.35);
+                        rawY -= 100 * intensity;
                     }
 
                     if (rawX > screenWidth * 0.5) {
-                        const rightIntensity = (rawX - screenWidth * 0.5) / (screenWidth * 0.5);
-                        rawX += 90 * rightIntensity;
+                        const intensity = getIntensity(rawX, screenWidth * 0.5, screenWidth * 0.5);
+                        rawX += 110 * intensity;
                     } else if (rawX < screenWidth * 0.5) {
-                        const leftIntensity = (screenWidth * 0.5 - rawX) / (screenWidth * 0.5);
-                        rawX -= 220 * leftIntensity;
+                        const intensity = getIntensity(rawX, screenWidth * 0.5, screenWidth * 0.5);
+                        rawX -= 250 * intensity;
                     }
 
                     const lastAvg =
@@ -111,21 +116,21 @@ export default function EyeTrack({ onGazeUpdate }: EyeTrackProps) {
                     let targetX = rawX;
                     let targetY = rawY;
 
-                    const outlierThreshold = isFixatingRef.current ? 80 : 250;
-                    if (gazeBufferRef.current.length > 5 && dist > outlierThreshold) {
-                        const smoothFactor = isFixatingRef.current ? 0.02 : 0.08;
+                    const outlierThreshold = isFixatingRef.current ? 70 : 300;
+                    if (gazeBufferRef.current.length > 3 && dist > outlierThreshold) {
+                        const smoothFactor = isFixatingRef.current ? 0.015 : 0.12;
                         targetX = lastAvg.x + (rawX - lastAvg.x) * smoothFactor;
                         targetY = lastAvg.y + (rawY - lastAvg.y) * smoothFactor;
                     }
 
                     gazeBufferRef.current.push({ x: targetX, y: targetY });
 
-                    const bufferLimit = isFixatingRef.current ? 30 : 12;
+                    const bufferLimit = isFixatingRef.current ? 35 : 10;
                     while (gazeBufferRef.current.length > bufferLimit) {
                         gazeBufferRef.current.shift();
                     }
 
-                    const weightPower = isFixatingRef.current ? 2.0 : 1.5;
+                    const weightPower = isFixatingRef.current ? 2.5 : 1.2;
                     const totalWeight = gazeBufferRef.current.reduce((s, _, i) => s + Math.pow(i + 1, weightPower), 0);
 
                     const avgX = gazeBufferRef.current.reduce((s, p, i) => s + p.x * Math.pow(i + 1, weightPower), 0) / totalWeight;
@@ -136,25 +141,24 @@ export default function EyeTrack({ onGazeUpdate }: EyeTrackProps) {
                         let minDistance = Infinity;
                         let closestRect: DOMRect | null = null;
 
-                        const STICKY_BIAS = 90;
-                        const NEXT_SENTENCE_BIAS = 120;
+                        const STICKY_BIAS = isFixatingRef.current ? 110 : 70;
+                        const NEXT_SENTENCE_BIAS = 140;
 
                         const screenHeight = window.innerHeight;
-                        const isBottomRegion = y > screenHeight * 0.7;
-                        const isTopRegion = y < screenHeight * 0.3;
+                        const isBottomRegion = y > screenHeight * 0.65;
+                        const isTopRegion = y < screenHeight * 0.35;
 
-                        const verticalToleranceMultiplier = (isBottomRegion || isTopRegion) ? 2.5 : 1.2;
-                        const MAX_VERTICAL_DISTANCE = 240 * verticalToleranceMultiplier;
+                        const verticalToleranceMultiplier = (isBottomRegion || isTopRegion) ? 3.0 : 1.4;
+                        const MAX_VERTICAL_DISTANCE = 250 * verticalToleranceMultiplier;
 
                         let verticalBias = 0;
                         if (isBottomRegion) {
-                            verticalBias = -120 * ((y - screenHeight * 0.7) / (screenHeight * 0.3));
+                            verticalBias = -140 * getIntensity(y, screenHeight * 0.65, screenHeight * 0.35);
                         } else if (isTopRegion) {
-                            verticalBias = 150 * ((screenHeight * 0.3 - y) / (screenHeight * 0.3));
+                            verticalBias = 180 * getIntensity(y, screenHeight * 0.35, screenHeight * 0.35);
                         }
 
                         const adjustedY = y + verticalBias;
-
                         const currentSentence = sentenceRectsRef.current.find(s => s.id === lastUpdateIdRef.current);
 
                         sentenceRectsRef.current.forEach(({ id, rect, order }) => {
@@ -164,7 +168,7 @@ export default function EyeTrack({ onGazeUpdate }: EyeTrackProps) {
                             const dy = Math.abs(adjustedY - centerY);
                             const dx = Math.abs(x - centerX);
 
-                            if (dy < MAX_VERTICAL_DISTANCE && dx < 500) {
+                            if (dy < MAX_VERTICAL_DISTANCE && dx < 550) {
                                 let distance = dy;
 
                                 if (id === lastUpdateIdRef.current) {
@@ -181,10 +185,10 @@ export default function EyeTrack({ onGazeUpdate }: EyeTrackProps) {
                                 const isLastSentence = id.endsWith(`-sentence-${maxIndexForSide}`);
 
                                 if (isFirstSentence || isLastSentence) {
-                                    distance -= 80;
+                                    distance -= 90;
                                 }
 
-                                if (dx > 350) distance += 300;
+                                if (dx > 400) distance += 350;
 
                                 if (distance < minDistance) {
                                     minDistance = distance;
@@ -206,41 +210,40 @@ export default function EyeTrack({ onGazeUpdate }: EyeTrackProps) {
                         const rect = closestRect as DOMRect;
                         const rectCenterX = rect.left + rect.width / 2;
                         const rectCenterY = rect.top + rect.height / 2;
-                        
+
                         const yDiff = Math.abs(avgY - rectCenterY);
                         const xDiff = Math.abs(avgX - rectCenterX);
-                        
-                        if (yDiff < 180) {
-                            const snapFactorY = isFixatingRef.current ? 0.85 : 0.6;
+
+                        if (yDiff < 200) {
+                            const snapFactorY = isFixatingRef.current ? 0.92 : 0.65;
                             finalY = avgY + (rectCenterY - avgY) * snapFactorY;
 
-                            if (xDiff < 500) {
-                                const snapFactorX = isFixatingRef.current ? 0.75 : 0.45;
+                            if (xDiff < 550) {
+                                const snapFactorX = isFixatingRef.current ? 0.82 : 0.5;
                                 finalX = avgX + (rectCenterX - avgX) * snapFactorX;
-
                                 const errorX = rectCenterX - avgX;
-                                driftOffsetRef.current.x += errorX * 0.005;
+                                driftOffsetRef.current.x = Math.max(-300, Math.min(300, driftOffsetRef.current.x + errorX * 0.004));
                             }
 
                             const errorY = rectCenterY - avgY;
-                            driftOffsetRef.current.y += errorY * 0.01;
+                            driftOffsetRef.current.y = Math.max(-400, Math.min(400, driftOffsetRef.current.y + errorY * 0.008));
                         }
                     }
 
                     setDotPos({ x: finalX, y: finalY });
 
-                    if (Math.hypot(finalX - lastTrailPosRef.current.x, finalY - lastTrailPosRef.current.y) > 30) {
+                    if (Math.hypot(finalX - lastTrailPosRef.current.x, finalY - lastTrailPosRef.current.y) > 25) {
                         const newId = Date.now();
-                        setTrail(prev => [...prev.slice(-15), { x: finalX, y: finalY, id: newId }]);
+                        setTrail(prev => [...prev.slice(-18), { x: finalX, y: finalY, id: newId }]);
                         lastTrailPosRef.current = { x: finalX, y: finalY };
-                        
+
                         setTimeout(() => {
                             setTrail(prev => prev.filter(t => t.id !== newId));
-                        }, 1000);
+                        }, 800);
                     }
 
                     if (closestId !== lastUpdateIdRef.current) {
-                        const DWELL_THRESHOLD = isFixatingRef.current ? 4 : 8;
+                        const DWELL_THRESHOLD = isFixatingRef.current ? 5 : 10;
 
                         if (closestId === candidateIdRef.current) {
                             dwellCountRef.current++;
