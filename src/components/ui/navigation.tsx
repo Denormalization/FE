@@ -8,7 +8,20 @@ export default function Navigation() {
     const router = useRouter();
     const pathname = usePathname();
     const { triggerFlip } = useBook();
-    const items = GET_NAV_ITEMS(router);
+    const isAdminSide = pathname.startsWith('/admin');
+
+    let items = GET_NAV_ITEMS(router);
+
+    if (isAdminSide) {
+        items = [
+            {
+                icon: <img src="/icons/home.svg" alt="홈" className="w-7 h-7" />,
+                title: '대시보드',
+                href: '/admin',
+                onClick: () => router.push('/admin')
+            }
+        ];
+    }
 
     const handleNavigation = (e: React.MouseEvent, item: any) => {
         item.onClick();
