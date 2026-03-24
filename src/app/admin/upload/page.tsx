@@ -9,12 +9,34 @@ const API_BASE =
     ? process.env.NEXT_PUBLIC_API_PROXY ?? '/api/backend'
     : process.env.NEXT_PUBLIC_API_URL ?? '';
 
+type UploadMetadata = {
+  isbn: string;
+  title: string;
+  author: string;
+  description: string;
+};
+
+type UploadResponse = {
+  isbn: number;
+  title: string;
+  description: string;
+  authors: string[];
+  publisher: string;
+  coverUrl: string | null;
+  genres: string[];
+  totalChars: number;
+  chapters: Array<{
+    orderNum: number;
+    title: string;
+  }>;
+};
+
 /* ── 입력 폼 (한글 IME 보호용 별도 컴포넌트) ── */
 function MetadataForm({
   onUpload,
   loading,
 }: {
-  onUpload: (meta: { isbn: string; title: string; author: string; description: string }) => void;
+  onUpload: (meta: UploadMetadata) => void;
   loading: boolean;
 }) {
   const [isbn, setIsbn] = useState('');
@@ -120,6 +142,36 @@ function FileDropZone({
   );
 }
 
+function CoverImagePicker({
+  coverImage,
+  onCoverImageSelect,
+}: {
+  coverImage: File | null;
+  onCoverImageSelect: (f: File | null) => void;
+}) {
+  const inputRef = useRef<HTMLInputElement>(null);
+
+  return (
+    <div className="w-full mt-4">
+      <label className="block text-xs font-semibold text-stone-500 mb-1 tracking-wide">커버 이미지 파일 (선택)</label>
+      <div
+        onClick={() => inputRef.current?.click()}
+        className="w-full px-4 py-2.5 bg-white/60 border border-stone-300 rounded-lg text-sm text-stone-700 cursor-pointer hover:border-amber-300 transition-all"
+      >
+        {coverImage ? coverImage.name : '이미지 파일 선택 (jpg, png 등)'}
+      </div>
+      <input
+        ref={inputRef}
+        type="file"
+        accept="image/*"
+        onChange={(e) => onCoverImageSelect(e.target.files?.[0] ?? null)}
+        className="hidden"
+      />
+      <p className="text-[11px] text-stone-400 mt-1">선택하지 않으면 기본 커버가 사용될 수 있습니다.</p>
+    </div>
+  );
+}
+
 /* ── 메인 페이지 ── */
 export default function AdminUploadPage() {
   const { setBookContent, updateBookContent } = useBook();
@@ -127,8 +179,10 @@ export default function AdminUploadPage() {
   const [loading, setLoading] = useState(false);
   const [result, setResult] = useState<string>('');
   const [resultOk, setResultOk] = useState(false);
+  const [coverImage, setCoverImage] = useState<File | null>(null);
   const isFirstRender = useRef(true);
   const fileRef = useRef<File | null>(null);
+  const coverImageRef = useRef<File | null>(null);
 
   const isTxt = file?.name.endsWith('.txt') ?? false;
 
@@ -137,7 +191,12 @@ export default function AdminUploadPage() {
     setFile(f);
   }, []);
 
-  const handleUpload = useCallback(async (meta: { isbn: string; title: string; author: string; description: string }) => {
+  const handleCoverImageSelect = useCallback((f: File | null) => {
+    coverImageRef.current = f;
+    setCoverImage(f);
+  }, []);
+
+  const handleUpload = useCallback(async (meta: UploadMetadata) => {
     const selectedFile = fileRef.current;
     if (!selectedFile) return alert('파일을 선택해주세요');
 
@@ -158,6 +217,10 @@ export default function AdminUploadPage() {
       if (meta.description) metadata.description = meta.description;
       formData.append('metadata', new Blob([JSON.stringify(metadata)], { type: 'application/json' }));
     }
+    if (coverImageRef.current) {
+      formData.append('coverImage', coverImageRef.current);
+      formData.append('cover', coverImageRef.current);
+    }
 
     setLoading(true);
     setResult('');
@@ -169,11 +232,12 @@ export default function AdminUploadPage() {
         body: formData,
       });
 
-      const text = await res.text();
       setResultOk(res.ok);
       if (res.ok) {
-        setResult(`✅ 업로드 성공 (${res.status})\n\n${text}`);
+        const data = (await res.json()) as UploadResponse;
+        setResult(`✅ 업로드 성공 (${res.status})\n\n${JSON.stringify(data, null, 2)}`);
       } else {
+        const text = await res.text();
         setResult(`❌ 실패 (${res.status})\n\n${text}`);
       }
     } catch (err) {
@@ -199,6 +263,7 @@ export default function AdminUploadPage() {
 
         {/* 파일 선택 */}
         <FileDropZone file={file} onFileSelect={handleFileSelect} />
+        <CoverImagePicker coverImage={coverImage} onCoverImageSelect={handleCoverImageSelect} />
 
         {/* 메타데이터 폼 or 업로드 버튼 */}
         <div className="mt-5">
@@ -264,7 +329,7 @@ export default function AdminUploadPage() {
     } else {
       updateBookContent(left, right);
     }
-  }, [file, loading, result, resultOk, isTxt, handleUpload, handleFileSelect, setBookContent, updateBookContent]);
+  }, [file, coverImage, loading, result, resultOk, isTxt, handleUpload, handleFileSelect, handleCoverImageSelect, setBookContent, updateBookContent]);
 
   return null;
 }
