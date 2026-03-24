@@ -8,7 +8,7 @@ import { LeftBookDetailContent, RightBookDetailContent, AnimatedPageContent } fr
 import { BookDetail, fetchBookDetail, fetchChapterContent } from '@/services/books';
 
 function BookDetailContent() {
-    const { setBookContent, updateBookContent, setReadingText } = useBook();
+    const { setBookContent, updateBookContent, setReadingText, setBookIds } = useBook();
     const searchParams = useSearchParams();
     const router = useRouter();
     const isbn = searchParams.get('isbn');
@@ -37,6 +37,7 @@ function BookDetailContent() {
                 chapterId: String(chapterId),
                 title: data.title,
             }));
+            setBookIds(String(data.isbn), String(chapterId));
             updateBookContent(
                 <AnimatedPageContent text={text} />,
                 <AnimatedPageContent text={text} delay={1200} />
@@ -54,6 +55,7 @@ function BookDetailContent() {
             const text = chapterData.content;
             setChapterContent(text);
             setReadingText(text, book.title);
+            setBookIds(String(book.isbn), String(currentChapterId));
             updateBookContent(
                 <AnimatedPageContent text={text} />,
                 <AnimatedPageContent text={text} delay={1200} />
