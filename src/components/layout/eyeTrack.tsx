@@ -61,7 +61,7 @@ export default function EyeTrack({ onGazeUpdate }: EyeTrackProps) {
             (window as any).webgazerInitialized = true;
 
             updateSentenceRects();
-            const rectInterval = setInterval(updateSentenceRects, 1500);
+            const rectInterval = setInterval(updateSentenceRects, 3000);
 
             try {
                 window.webgazer.setGazeListener((data: any) => {
@@ -91,7 +91,7 @@ export default function EyeTrack({ onGazeUpdate }: EyeTrackProps) {
                         const intensity = getIntensity(rawY, screenHeight * 0.8, screenHeight * 0.2);
                     } else if (rawY < screenHeight * 0.25) {
                         const intensity = getIntensity(rawY, screenHeight * 0.25, screenHeight * 0.25);
-                        rawY -= 200 * intensity;
+                        rawY -= 100 * intensity;
                     }
 
                     if (rawX > screenWidth * 0.5) {
@@ -154,7 +154,7 @@ export default function EyeTrack({ onGazeUpdate }: EyeTrackProps) {
                         if (isBottomRegion) {
                             verticalBias = -180 * getIntensity(y, screenHeight * 0.8, screenHeight * 0.2);
                         } else if (isTopRegion) {
-                            verticalBias = 20 * getIntensity(y, screenHeight * 0.25, screenHeight * 0.25);
+                            verticalBias = 60 * getIntensity(y, screenHeight * 0.25, screenHeight * 0.25);
                         }
 
                         const adjustedY = y + verticalBias;
@@ -231,9 +231,9 @@ export default function EyeTrack({ onGazeUpdate }: EyeTrackProps) {
 
                     setDotPos({ x: finalX, y: finalY });
 
-                    if (Math.hypot(finalX - lastTrailPosRef.current.x, finalY - lastTrailPosRef.current.y) > 25) {
+                    if (Math.hypot(finalX - lastTrailPosRef.current.x, finalY - lastTrailPosRef.current.y) > 45) {
                         const newId = Date.now();
-                        setTrail(prev => [...prev.slice(-18), { x: finalX, y: finalY, id: newId }]);
+                        setTrail(prev => [...prev.slice(-8), { x: finalX, y: finalY, id: newId }]);
                         lastTrailPosRef.current = { x: finalX, y: finalY };
 
                         setTimeout(() => {
@@ -318,14 +318,13 @@ export default function EyeTrack({ onGazeUpdate }: EyeTrackProps) {
                 {trail.map((t) => (
                     <div
                         key={t.id}
-                        className="absolute rounded-full bg-[#BCE68F]/8 trail-blob blur-[8px]"
+                        className="absolute rounded-full bg-[#BCE68F]/8 trail-blob blur-[4px]"
                         style={{
                             left: t.x,
                             top: t.y,
                             width: '60px',
                             height: '60px',
                             transform: 'translate(-50%, -50%)',
-                            boxShadow: '0 0 20px rgba(188, 230, 143, 0.15)',
                         }}
                     />
                 ))}
@@ -337,9 +336,8 @@ export default function EyeTrack({ onGazeUpdate }: EyeTrackProps) {
                         width: '75px',
                         height: '75px',
                         transform: 'translate(-50%, -50%)',
-                        boxShadow: '0 0 30px rgba(188, 230, 143, 0.45), inset 0 0 20px rgba(188, 230, 143, 0.25)',
+                        boxShadow: '0 0 20px rgba(188, 230, 143, 0.3), inset 0 0 10px rgba(188, 230, 143, 0.2)',
                         animation: 'blob-morph 4s ease-in-out infinite alternate',
-                        filter: 'blur(0.5px)'
                     }}
                 />
             </div>
