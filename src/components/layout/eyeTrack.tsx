@@ -5,6 +5,9 @@ import { EyeTrackProps } from '@/types/eyeTrack';
 
 export default function EyeTrack({ onGazeUpdate }: EyeTrackProps) {
     const [dotPos, setDotPos] = useState({ x: 0, y: 0 });
+    const targetPosRef = useRef({ x: 0, y: 0 });
+    const currentPosRef = useRef({ x: 0, y: 0 });
+
     const initializedRef = useRef(false);
     const gazeBufferRef = useRef<{ x: number; y: number }[]>([]);
     const lastPointRef = useRef<{ x: number; y: number; t: number } | null>(null);
@@ -15,8 +18,10 @@ export default function EyeTrack({ onGazeUpdate }: EyeTrackProps) {
     const candidateIdRef = useRef<string | null>(null);
     const driftOffsetRef = useRef({ x: 0, y: 0 });
     const latestOnGazeUpdateRef = useRef(onGazeUpdate);
-    const [trail, setTrail] = useState<{ x: number; y: number; id: number }[]>([]);
+    const [trail, setTrail] = useState<{ x: number; y: number; id: number; opacity: number; scale: number }[]>([]);
     const lastTrailPosRef = useRef({ x: 0, y: 0 });
+    const animationFrameRef = useRef<number | null>(null);
+
 
     useEffect(() => {
         latestOnGazeUpdateRef.current = onGazeUpdate;
@@ -229,17 +234,18 @@ export default function EyeTrack({ onGazeUpdate }: EyeTrackProps) {
                         }
                     }
 
-                    setDotPos({ x: finalX, y: finalY });
+                    targetPosRef.current = { x: finalX, y: finalY };
 
-                    if (Math.hypot(finalX - lastTrailPosRef.current.x, finalY - lastTrailPosRef.current.y) > 45) {
+                    if (Math.hypot(finalX - lastTrailPosRef.current.x, finalY - lastTrailPosRef.current.y) > 12) {
                         const newId = Date.now();
-                        setTrail(prev => [...prev.slice(-8), { x: finalX, y: finalY, id: newId }]);
+                        setTrail(prev => [
+                            ...prev.slice(-25),
+                            { x: finalX, y: finalY, id: newId, opacity: 0.7, scale: 1.0 }
+                        ]);
                         lastTrailPosRef.current = { x: finalX, y: finalY };
-
-                        setTimeout(() => {
-                            setTrail(prev => prev.filter(t => t.id !== newId));
-                        }, 800);
                     }
+
+
 
                     if (closestId !== lastUpdateIdRef.current) {
                         const DWELL_THRESHOLD = isFixatingRef.current ? 3 : 7;
@@ -271,13 +277,40 @@ export default function EyeTrack({ onGazeUpdate }: EyeTrackProps) {
                     window.webgazer.params.showFaceOverlay = false;
                     window.webgazer.params.showFaceFeedbackBox = false;
                 }
+
+                const animate = () => {
+                    const lerpFactor = isFixatingRef.current ? 0.08 : 0.15;
+                    currentPosRef.current.x += (targetPosRef.current.x - currentPosRef.current.x) * lerpFactor;
+                    currentPosRef.current.y += (targetPosRef.current.y - currentPosRef.current.y) * lerpFactor;
+
+                    setDotPos({ x: currentPosRef.current.x, y: currentPosRef.current.y });
+
+                    setTrail(prev => {
+                        const updated = prev
+                            .map(p => ({
+                                ...p,
+                                opacity: p.opacity * 0.975,
+                                scale: p.scale * 0.985
+                            }))
+                            .filter(p => p.opacity > 0.02);
+
+                        return updated;
+                    });
+
+
+                    animationFrameRef.current = requestAnimationFrame(animate);
+                };
+                animationFrameRef.current = requestAnimationFrame(animate);
+
             } catch (err) {
             }
 
             return () => {
                 clearInterval(rectInterval);
+                if (animationFrameRef.current) cancelAnimationFrame(animationFrameRef.current);
             };
         };
+
 
         if (window.webgazer) {
             initWebGazer();
@@ -318,29 +351,43 @@ export default function EyeTrack({ onGazeUpdate }: EyeTrackProps) {
                 {trail.map((t) => (
                     <div
                         key={t.id}
-                        className="absolute rounded-full bg-[#BCE68F]/8 trail-blob blur-[4px]"
+                        className="absolute rounded-full pointer-events-none"
                         style={{
                             left: t.x,
                             top: t.y,
-                            width: '60px',
-                            height: '60px',
+                            width: `${65 * t.scale}px`,
+                            height: `${65 * t.scale}px`,
+                            opacity: t.opacity,
                             transform: 'translate(-50%, -50%)',
+                            background: 'radial-gradient(circle, rgba(188, 230, 143, 0.5) 0%, rgba(188, 230, 143, 0) 75%)',
+                            mixBlendMode: 'plus-lighter',
+                            filter: 'blur(8px)',
                         }}
                     />
                 ))}
+
                 <div
-                    className="absolute rounded-[40%_60%_70%_30%/40%_50%_60%_50%] border-[2.5px] border-[#BCE68F]/70 bg-[#BCE68F]/25 backdrop-blur-[2px] transition-all duration-180 cubic-bezier(0.175, 0.885, 0.32, 1.275)"
+                    className="absolute rounded-full"
                     style={{
                         left: dotPos.x,
                         top: dotPos.y,
-                        width: '75px',
-                        height: '75px',
+                        width: '45px',
+                        height: '45px',
                         transform: 'translate(-50%, -50%)',
-                        boxShadow: '0 0 20px rgba(188, 230, 143, 0.3), inset 0 0 10px rgba(188, 230, 143, 0.2)',
-                        animation: 'blob-morph 4s ease-in-out infinite alternate',
+                        background: 'radial-gradient(circle, rgba(188, 230, 143, 0.45) 0%, rgba(188, 230, 143, 0.1) 80%)',
+                        boxShadow: '0 0 25px rgba(188, 230, 143, 0.3)',
                     }}
-                />
+                >
+                    <div
+                        className="absolute top-1/2 left-1/2 w-3 h-3 bg-[#BCE68F] rounded-full blur-[0.5px]"
+                        style={{
+                            transform: 'translate(-50%, -50%)',
+                            boxShadow: '0 0 10px #BCE68F, 0 0 20px #BCE68F',
+                        }}
+                    />
+                </div>
             </div>
+
 
             <style jsx global>{`
                 @keyframes fade-out {
@@ -353,11 +400,12 @@ export default function EyeTrack({ onGazeUpdate }: EyeTrackProps) {
                 }
 
                 @keyframes blob-morph {
-                    0% { border-radius: 40% 60% 70% 30% / 40% 50% 60% 50%; transform: translate(-50%, -50%) scale(1) rotate(0deg); }
-                    33% { border-radius: 70% 30% 50% 50% / 30% 30% 70% 70%; transform: translate(-50%, -50%) scale(1.05) rotate(15deg); }
-                    66% { border-radius: 30% 70% 70% 30% / 50% 40% 30% 60%; transform: translate(-50%, -50%) scale(0.95) rotate(-15deg); }
-                    100% { border-radius: 40% 60% 70% 30% / 40% 50% 60% 50%; transform: translate(-50%, -50%) scale(1) rotate(0deg); }
+                    0% { border-radius: 45% 55% 65% 35% / 50% 45% 55% 50%; transform: translate(-50%, -50%) scale(1) rotate(0deg); }
+                    33% { border-radius: 65% 35% 50% 50% / 45% 45% 65% 65%; transform: translate(-50%, -50%) scale(1.1) rotate(120deg); }
+                    66% { border-radius: 35% 65% 65% 35% / 55% 50% 45% 65%; transform: translate(-50%, -50%) scale(0.9) rotate(240deg); }
+                    100% { border-radius: 45% 55% 65% 35% / 50% 45% 55% 50%; transform: translate(-50%, -50%) scale(1) rotate(360deg); }
                 }
+
 
                 #webgazerVideoContainer,
                 #webgazerFaceOverlay,
