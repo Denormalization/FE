@@ -94,10 +94,15 @@ export default function EyeTrack({ onGazeUpdate }: EyeTrackProps) {
 
                     if (rawY > screenHeight * 0.8) {
                         const intensity = getIntensity(rawY, screenHeight * 0.8, screenHeight * 0.2);
-                    } else if (rawY < screenHeight * 0.25) {
-                        const intensity = getIntensity(rawY, screenHeight * 0.25, screenHeight * 0.25);
-                        rawY -= 100 * intensity;
+                        rawY += 120 * intensity;
+                    } else if (rawY < screenHeight * 0.35) {
+                        const intensity = getIntensity(rawY, screenHeight * 0.35, screenHeight * 0.35);
+                        rawY -= 200 * intensity;
+                        if (rawX < screenWidth * 0.45) {
+                            rawY -= 40 * intensity;
+                        }
                     }
+
 
                     if (rawX > screenWidth * 0.5) {
                         const intensity = getIntensity(rawX, screenWidth * 0.5, screenWidth * 0.5);
@@ -106,6 +111,7 @@ export default function EyeTrack({ onGazeUpdate }: EyeTrackProps) {
                         const intensity = getIntensity(rawX, screenWidth * 0.5, screenWidth * 0.5);
                         rawX -= 210 * intensity;
                     }
+
 
                     const lastAvg =
                         gazeBufferRef.current.length > 0
@@ -150,17 +156,23 @@ export default function EyeTrack({ onGazeUpdate }: EyeTrackProps) {
 
                         const screenHeight = window.innerHeight;
                         const isBottomRegion = y > screenHeight * 0.8;
-                        const isTopRegion = y < screenHeight * 0.25;
+                        const isTopRegion = y < screenHeight * 0.35;
 
                         const verticalToleranceMultiplier = (isBottomRegion || isTopRegion) ? 3.0 : 1.4;
-                        const MAX_VERTICAL_DISTANCE = 280 * verticalToleranceMultiplier;
+                        const MAX_VERTICAL_DISTANCE = 300 * verticalToleranceMultiplier;
+
+
+
 
                         let verticalBias = 0;
                         if (isBottomRegion) {
-                            verticalBias = -180 * getIntensity(y, screenHeight * 0.8, screenHeight * 0.2);
+                            verticalBias = 140 * getIntensity(y, screenHeight * 0.8, screenHeight * 0.2);
                         } else if (isTopRegion) {
-                            verticalBias = 60 * getIntensity(y, screenHeight * 0.25, screenHeight * 0.25);
+                            verticalBias = -80 * getIntensity(y, screenHeight * 0.35, screenHeight * 0.35);
                         }
+
+
+
 
                         const adjustedY = y + verticalBias;
                         const currentSentence = sentenceRectsRef.current.find(s => s.id === lastUpdateIdRef.current);
@@ -176,12 +188,15 @@ export default function EyeTrack({ onGazeUpdate }: EyeTrackProps) {
                                 let distance = dy;
 
                                 if (id === lastUpdateIdRef.current) {
-                                    distance -= STICKY_BIAS;
+                                    distance -= isTopRegion ? STICKY_BIAS * 0.6 : STICKY_BIAS;
                                 } else if (currentSentence && order === currentSentence.order + 1) {
                                     distance -= NEXT_SENTENCE_BIAS;
                                 }
 
                                 const isFirstSentence = id.endsWith('-sentence-0');
+                                if (isFirstSentence && isTopRegion) {
+                                    distance -= 120;
+                                }
                                 const sidePrefix = id.split('-')[0];
                                 const maxIndexForSide = Math.max(...sentenceRectsRef.current
                                     .filter(s => s.id.startsWith(sidePrefix))
@@ -300,6 +315,7 @@ export default function EyeTrack({ onGazeUpdate }: EyeTrackProps) {
 
                     animationFrameRef.current = requestAnimationFrame(animate);
                 };
+
                 animationFrameRef.current = requestAnimationFrame(animate);
 
             } catch (err) {
