@@ -1,35 +1,29 @@
 'use client';
 
 import React, { useState, useEffect, useRef } from 'react';
-import { usePathname } from 'next/navigation';
 import Navigation from './navigation';
 import { useBook } from '@/context/bookContext';
 
 export function Book() {
     const { leftContent, rightContent, overlayContent, flipKey, prevContent } = useBook();
-    const pathname = usePathname();
     const [isFlipping, setIsFlipping] = useState(false);
     const [pageContent, setPageContent] = useState({ left: leftContent, right: rightContent });
     const isFirstRender = useRef(true);
-    const lastAnimatedPathnameRef = useRef(pathname);
     const lastFlipKeyRef = useRef(flipKey);
 
     useEffect(() => {
         if (isFirstRender.current) {
             setPageContent({ left: leftContent, right: rightContent });
             isFirstRender.current = false;
-            lastAnimatedPathnameRef.current = pathname;
             lastFlipKeyRef.current = flipKey;
             return;
         }
 
         if (!leftContent && !rightContent) return;
 
-        const isPathChanged = lastAnimatedPathnameRef.current !== pathname;
         const isFlipTriggered = lastFlipKeyRef.current !== flipKey;
 
-        if (isFlipTriggered || isPathChanged) {
-            lastAnimatedPathnameRef.current = pathname;
+        if (isFlipTriggered) {
             lastFlipKeyRef.current = flipKey;
 
             setIsFlipping(true);
@@ -49,7 +43,7 @@ export function Book() {
         } else {
             setPageContent({ left: leftContent, right: rightContent });
         }
-    }, [leftContent, rightContent, pathname, flipKey]);
+    }, [leftContent, rightContent, flipKey]);
 
     return (
         <div className="flex items-center justify-center">

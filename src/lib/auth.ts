@@ -34,8 +34,11 @@ const STORAGE_ACCESS = 'dmz_access_token';
 const STORAGE_REFRESH = 'dmz_refresh_token';
 const STORAGE_NAVER_OAUTH_STATE = 'dmz_naver_oauth_state';
 
-function getRedirectUri(): string {
+function getRedirectUri(provider: OAuthProvider): string {
   if (typeof window === 'undefined') return '';
+  if (provider === 'naver') {
+    return `${window.location.origin}/oauth/naver/callback`;
+  }
   return `${window.location.origin}/oauth/callback`;
 }
 
@@ -61,7 +64,7 @@ export function consumeNaverOAuthState(): string | null {
 }
 
 export function getOAuthRedirectUrl(provider: OAuthProvider): string {
-  const redirectUri = getRedirectUri();
+  const redirectUri = getRedirectUri(provider);
 
   if (provider === 'google') {
     const params = new URLSearchParams({
@@ -70,6 +73,7 @@ export function getOAuthRedirectUrl(provider: OAuthProvider): string {
       response_type: 'code',
       scope: 'openid email profile',
       state: 'google',
+      prompt: 'select_account',
     });
     return `https://accounts.google.com/o/oauth2/v2/auth?${params.toString()}`;
   }
