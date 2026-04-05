@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState, useMemo, useRef } from 'react';
+import { useEffect, useState, useMemo, useRef, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
 import { useBook } from '@/context/bookContext';
 import { POEM_TEXT } from '@/mock/read';
@@ -102,7 +102,7 @@ export default function Read() {
         );
     }, [setBookContent, currentPage, pages]);
 
-    const handleGazeUpdate = (id: string | null) => {
+    const handleGazeUpdate = useCallback((id: string | null) => {
         const now = Date.now();
         const bookInfo = currentBookInfoRef.current;
 
@@ -185,7 +185,7 @@ export default function Read() {
                 }
             }
         }
-    };
+    }, [currentPage, pages, setActiveGazeId]);
     useEffect(() => {
         const raw = localStorage.getItem('lastRead');
         if (raw) {
