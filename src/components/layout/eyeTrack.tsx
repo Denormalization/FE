@@ -5,6 +5,9 @@ import { EyeTrackProps } from '@/types/eyeTrack';
 
 export default function EyeTrack({ onGazeUpdate }: EyeTrackProps) {
     const [dotPos, setDotPos] = useState({ x: 0, y: 0 });
+    const targetPosRef = useRef({ x: 0, y: 0 });
+    const currentPosRef = useRef({ x: 0, y: 0 });
+
     const initializedRef = useRef(false);
     const gazeBufferRef = useRef<{ x: number; y: number }[]>([]);
     const lastPointRef = useRef<{ x: number; y: number; t: number } | null>(null);
@@ -15,8 +18,10 @@ export default function EyeTrack({ onGazeUpdate }: EyeTrackProps) {
     const candidateIdRef = useRef<string | null>(null);
     const driftOffsetRef = useRef({ x: 0, y: 0 });
     const latestOnGazeUpdateRef = useRef(onGazeUpdate);
-    const [trail, setTrail] = useState<{ x: number; y: number; id: number }[]>([]);
+    const [trail, setTrail] = useState<{ x: number; y: number; id: number; opacity: number; scale: number }[]>([]);
     const lastTrailPosRef = useRef({ x: 0, y: 0 });
+    const animationFrameRef = useRef<number | null>(null);
+
 
     useEffect(() => {
         latestOnGazeUpdateRef.current = onGazeUpdate;
@@ -61,7 +66,7 @@ export default function EyeTrack({ onGazeUpdate }: EyeTrackProps) {
             (window as any).webgazerInitialized = true;
 
             updateSentenceRects();
-            const rectInterval = setInterval(updateSentenceRects, 1500);
+            const rectInterval = setInterval(updateSentenceRects, 3000);
 
             try {
                 window.webgazer.setGazeListener((data: any) => {
@@ -78,7 +83,7 @@ export default function EyeTrack({ onGazeUpdate }: EyeTrackProps) {
                     }
 
                     lastPointRef.current = { x: data.x, y: data.y, t: now };
-                    const fixationThreshold = isFixatingRef.current ? 0.35 : 0.22;
+                    const fixationThreshold = isFixatingRef.current ? 0.45 : 0.32;
                     isFixatingRef.current = velocity < fixationThreshold;
 
                     let rawX = data.x + driftOffsetRef.current.x;
@@ -87,21 +92,26 @@ export default function EyeTrack({ onGazeUpdate }: EyeTrackProps) {
                     const screenHeight = window.innerHeight;
                     const screenWidth = window.innerWidth;
 
-                    if (rawY > screenHeight * 0.65) {
-                        const intensity = getIntensity(rawY, screenHeight * 0.65, screenHeight * 0.35);
-                        rawY += 80 * intensity;
+                    if (rawY > screenHeight * 0.8) {
+                        const intensity = getIntensity(rawY, screenHeight * 0.8, screenHeight * 0.2);
+                        rawY += 120 * intensity;
                     } else if (rawY < screenHeight * 0.35) {
                         const intensity = getIntensity(rawY, screenHeight * 0.35, screenHeight * 0.35);
-                        rawY -= 100 * intensity;
+                        rawY -= 200 * intensity;
+                        if (rawX < screenWidth * 0.45) {
+                            rawY -= 40 * intensity;
+                        }
                     }
+
 
                     if (rawX > screenWidth * 0.5) {
                         const intensity = getIntensity(rawX, screenWidth * 0.5, screenWidth * 0.5);
-                        rawX += 110 * intensity;
+                        rawX += 210 * intensity;
                     } else if (rawX < screenWidth * 0.5) {
                         const intensity = getIntensity(rawX, screenWidth * 0.5, screenWidth * 0.5);
-                        rawX -= 250 * intensity;
+                        rawX -= 210 * intensity;
                     }
+
 
                     const lastAvg =
                         gazeBufferRef.current.length > 0
@@ -116,16 +126,16 @@ export default function EyeTrack({ onGazeUpdate }: EyeTrackProps) {
                     let targetX = rawX;
                     let targetY = rawY;
 
-                    const outlierThreshold = isFixatingRef.current ? 70 : 300;
+                    const outlierThreshold = isFixatingRef.current ? 50 : 220;
                     if (gazeBufferRef.current.length > 3 && dist > outlierThreshold) {
-                        const smoothFactor = isFixatingRef.current ? 0.015 : 0.12;
+                        const smoothFactor = isFixatingRef.current ? 0.02 : 0.18;
                         targetX = lastAvg.x + (rawX - lastAvg.x) * smoothFactor;
                         targetY = lastAvg.y + (rawY - lastAvg.y) * smoothFactor;
                     }
 
                     gazeBufferRef.current.push({ x: targetX, y: targetY });
 
-                    const bufferLimit = isFixatingRef.current ? 35 : 10;
+                    const bufferLimit = isFixatingRef.current ? 45 : 18;
                     while (gazeBufferRef.current.length > bufferLimit) {
                         gazeBufferRef.current.shift();
                     }
@@ -145,18 +155,24 @@ export default function EyeTrack({ onGazeUpdate }: EyeTrackProps) {
                         const NEXT_SENTENCE_BIAS = 140;
 
                         const screenHeight = window.innerHeight;
-                        const isBottomRegion = y > screenHeight * 0.65;
+                        const isBottomRegion = y > screenHeight * 0.8;
                         const isTopRegion = y < screenHeight * 0.35;
 
                         const verticalToleranceMultiplier = (isBottomRegion || isTopRegion) ? 3.0 : 1.4;
-                        const MAX_VERTICAL_DISTANCE = 250 * verticalToleranceMultiplier;
+                        const MAX_VERTICAL_DISTANCE = 300 * verticalToleranceMultiplier;
+
+
+
 
                         let verticalBias = 0;
                         if (isBottomRegion) {
-                            verticalBias = -140 * getIntensity(y, screenHeight * 0.65, screenHeight * 0.35);
+                            verticalBias = 140 * getIntensity(y, screenHeight * 0.8, screenHeight * 0.2);
                         } else if (isTopRegion) {
-                            verticalBias = 180 * getIntensity(y, screenHeight * 0.35, screenHeight * 0.35);
+                            verticalBias = -80 * getIntensity(y, screenHeight * 0.35, screenHeight * 0.35);
                         }
+
+
+
 
                         const adjustedY = y + verticalBias;
                         const currentSentence = sentenceRectsRef.current.find(s => s.id === lastUpdateIdRef.current);
@@ -172,12 +188,15 @@ export default function EyeTrack({ onGazeUpdate }: EyeTrackProps) {
                                 let distance = dy;
 
                                 if (id === lastUpdateIdRef.current) {
-                                    distance -= STICKY_BIAS;
+                                    distance -= isTopRegion ? STICKY_BIAS * 0.6 : STICKY_BIAS;
                                 } else if (currentSentence && order === currentSentence.order + 1) {
                                     distance -= NEXT_SENTENCE_BIAS;
                                 }
 
                                 const isFirstSentence = id.endsWith('-sentence-0');
+                                if (isFirstSentence && isTopRegion) {
+                                    distance -= 120;
+                                }
                                 const sidePrefix = id.split('-')[0];
                                 const maxIndexForSide = Math.max(...sentenceRectsRef.current
                                     .filter(s => s.id.startsWith(sidePrefix))
@@ -185,7 +204,7 @@ export default function EyeTrack({ onGazeUpdate }: EyeTrackProps) {
                                 const isLastSentence = id.endsWith(`-sentence-${maxIndexForSide}`);
 
                                 if (isFirstSentence || isLastSentence) {
-                                    distance -= 90;
+                                    distance -= 140;
                                 }
 
                                 if (dx > 400) distance += 350;
@@ -215,35 +234,36 @@ export default function EyeTrack({ onGazeUpdate }: EyeTrackProps) {
                         const xDiff = Math.abs(avgX - rectCenterX);
 
                         if (yDiff < 200) {
-                            const snapFactorY = isFixatingRef.current ? 0.92 : 0.65;
+                            const snapFactorY = isFixatingRef.current ? 0.95 : 0.75;
                             finalY = avgY + (rectCenterY - avgY) * snapFactorY;
 
                             if (xDiff < 550) {
-                                const snapFactorX = isFixatingRef.current ? 0.82 : 0.5;
+                                const snapFactorX = isFixatingRef.current ? 0.9 : 0.65;
                                 finalX = avgX + (rectCenterX - avgX) * snapFactorX;
                                 const errorX = rectCenterX - avgX;
-                                driftOffsetRef.current.x = Math.max(-300, Math.min(300, driftOffsetRef.current.x + errorX * 0.004));
+                                driftOffsetRef.current.x = Math.max(-300, Math.min(300, driftOffsetRef.current.x * 0.999 + errorX * 0.003));
                             }
 
                             const errorY = rectCenterY - avgY;
-                            driftOffsetRef.current.y = Math.max(-400, Math.min(400, driftOffsetRef.current.y + errorY * 0.008));
+                            driftOffsetRef.current.y = Math.max(-400, Math.min(400, driftOffsetRef.current.y * 0.999 + errorY * 0.006));
                         }
                     }
 
-                    setDotPos({ x: finalX, y: finalY });
+                    targetPosRef.current = { x: finalX, y: finalY };
 
-                    if (Math.hypot(finalX - lastTrailPosRef.current.x, finalY - lastTrailPosRef.current.y) > 25) {
+                    if (Math.hypot(finalX - lastTrailPosRef.current.x, finalY - lastTrailPosRef.current.y) > 12) {
                         const newId = Date.now();
-                        setTrail(prev => [...prev.slice(-18), { x: finalX, y: finalY, id: newId }]);
+                        setTrail(prev => [
+                            ...prev.slice(-25),
+                            { x: finalX, y: finalY, id: newId, opacity: 0.7, scale: 1.0 }
+                        ]);
                         lastTrailPosRef.current = { x: finalX, y: finalY };
-
-                        setTimeout(() => {
-                            setTrail(prev => prev.filter(t => t.id !== newId));
-                        }, 800);
                     }
 
+
+
                     if (closestId !== lastUpdateIdRef.current) {
-                        const DWELL_THRESHOLD = isFixatingRef.current ? 5 : 10;
+                        const DWELL_THRESHOLD = isFixatingRef.current ? 3 : 7;
 
                         if (closestId === candidateIdRef.current) {
                             dwellCountRef.current++;
@@ -272,13 +292,41 @@ export default function EyeTrack({ onGazeUpdate }: EyeTrackProps) {
                     window.webgazer.params.showFaceOverlay = false;
                     window.webgazer.params.showFaceFeedbackBox = false;
                 }
+
+                const animate = () => {
+                    const lerpFactor = isFixatingRef.current ? 0.08 : 0.15;
+                    currentPosRef.current.x += (targetPosRef.current.x - currentPosRef.current.x) * lerpFactor;
+                    currentPosRef.current.y += (targetPosRef.current.y - currentPosRef.current.y) * lerpFactor;
+
+                    setDotPos({ x: currentPosRef.current.x, y: currentPosRef.current.y });
+
+                    setTrail(prev => {
+                        const updated = prev
+                            .map(p => ({
+                                ...p,
+                                opacity: p.opacity * 0.975,
+                                scale: p.scale * 0.985
+                            }))
+                            .filter(p => p.opacity > 0.02);
+
+                        return updated;
+                    });
+
+
+                    animationFrameRef.current = requestAnimationFrame(animate);
+                };
+
+                animationFrameRef.current = requestAnimationFrame(animate);
+
             } catch (err) {
             }
 
             return () => {
                 clearInterval(rectInterval);
+                if (animationFrameRef.current) cancelAnimationFrame(animationFrameRef.current);
             };
         };
+
 
         if (window.webgazer) {
             initWebGazer();
@@ -319,31 +367,43 @@ export default function EyeTrack({ onGazeUpdate }: EyeTrackProps) {
                 {trail.map((t) => (
                     <div
                         key={t.id}
-                        className="absolute rounded-full bg-[#BCE68F]/8 trail-blob blur-[8px]"
+                        className="absolute rounded-full pointer-events-none"
                         style={{
                             left: t.x,
                             top: t.y,
-                            width: '60px',
-                            height: '60px',
+                            width: `${65 * t.scale}px`,
+                            height: `${65 * t.scale}px`,
+                            opacity: t.opacity,
                             transform: 'translate(-50%, -50%)',
-                            boxShadow: '0 0 20px rgba(188, 230, 143, 0.15)',
+                            background: 'radial-gradient(circle, rgba(188, 230, 143, 0.5) 0%, rgba(188, 230, 143, 0) 75%)',
+                            mixBlendMode: 'plus-lighter',
+                            filter: 'blur(8px)',
                         }}
                     />
                 ))}
+
                 <div
-                    className="absolute rounded-[40%_60%_70%_30%/40%_50%_60%_50%] border-[2.5px] border-[#BCE68F]/70 bg-[#BCE68F]/25 backdrop-blur-[2px] transition-all duration-300 cubic-bezier(0.175, 0.885, 0.32, 1.275)"
+                    className="absolute rounded-full"
                     style={{
                         left: dotPos.x,
                         top: dotPos.y,
-                        width: '75px',
-                        height: '75px',
+                        width: '45px',
+                        height: '45px',
                         transform: 'translate(-50%, -50%)',
-                        boxShadow: '0 0 30px rgba(188, 230, 143, 0.45), inset 0 0 20px rgba(188, 230, 143, 0.25)',
-                        animation: 'blob-morph 4s ease-in-out infinite alternate',
-                        filter: 'blur(0.5px)'
+                        background: 'radial-gradient(circle, rgba(188, 230, 143, 0.45) 0%, rgba(188, 230, 143, 0.1) 80%)',
+                        boxShadow: '0 0 25px rgba(188, 230, 143, 0.3)',
                     }}
-                />
+                >
+                    <div
+                        className="absolute top-1/2 left-1/2 w-3 h-3 bg-[#BCE68F] rounded-full blur-[0.5px]"
+                        style={{
+                            transform: 'translate(-50%, -50%)',
+                            boxShadow: '0 0 10px #BCE68F, 0 0 20px #BCE68F',
+                        }}
+                    />
+                </div>
             </div>
+
 
             <style jsx global>{`
                 @keyframes fade-out {
@@ -356,11 +416,12 @@ export default function EyeTrack({ onGazeUpdate }: EyeTrackProps) {
                 }
 
                 @keyframes blob-morph {
-                    0% { border-radius: 40% 60% 70% 30% / 40% 50% 60% 50%; transform: translate(-50%, -50%) scale(1) rotate(0deg); }
-                    33% { border-radius: 70% 30% 50% 50% / 30% 30% 70% 70%; transform: translate(-50%, -50%) scale(1.05) rotate(15deg); }
-                    66% { border-radius: 30% 70% 70% 30% / 50% 40% 30% 60%; transform: translate(-50%, -50%) scale(0.95) rotate(-15deg); }
-                    100% { border-radius: 40% 60% 70% 30% / 40% 50% 60% 50%; transform: translate(-50%, -50%) scale(1) rotate(0deg); }
+                    0% { border-radius: 45% 55% 65% 35% / 50% 45% 55% 50%; transform: translate(-50%, -50%) scale(1) rotate(0deg); }
+                    33% { border-radius: 65% 35% 50% 50% / 45% 45% 65% 65%; transform: translate(-50%, -50%) scale(1.1) rotate(120deg); }
+                    66% { border-radius: 35% 65% 65% 35% / 55% 50% 45% 65%; transform: translate(-50%, -50%) scale(0.9) rotate(240deg); }
+                    100% { border-radius: 45% 55% 65% 35% / 50% 45% 55% 50%; transform: translate(-50%, -50%) scale(1) rotate(360deg); }
                 }
+
 
                 #webgazerVideoContainer,
                 #webgazerFaceOverlay,
