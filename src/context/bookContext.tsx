@@ -6,7 +6,6 @@ interface ContentState {
     leftContent: ReactNode;
     rightContent: ReactNode;
 }
-
 interface BookContextType {
     leftContent: ReactNode;
     rightContent: ReactNode;
@@ -17,7 +16,12 @@ interface BookContextType {
     setBookContent: (left: ReactNode, right: ReactNode) => void;
     updateBookContent: (left: ReactNode, right: ReactNode) => void;
     setOverlayContent: (overlay: ReactNode) => void;
+    activeGazeId: string | null;
+    setActiveGazeId: (id: string | null) => void;
     setReadingText: (text: string, title?: string) => void;
+    currentIsbn: string | null;
+    currentChapterId: string | null;
+    setBookIds: (isbn: string, chapterId: string) => void;
     triggerFlip: () => void;
     prevContent: ContentState | null;
 }
@@ -32,8 +36,11 @@ export function BookProvider({ children }: { children: ReactNode }) {
     const [overlayContent, setOverlayContent] = useState<ReactNode>(null);
     const [prevContent, setPrevContent] = useState<ContentState | null>(null);
     const [flipKey, setFlipKey] = useState(0);
+    const [activeGazeId, setActiveGazeId] = useState<string | null>(null);
     const [readingText, setReadingTextState] = useState('');
     const [readingTitle, setReadingTitle] = useState('');
+    const [currentIsbn, setCurrentIsbn] = useState<string | null>(null);
+    const [currentChapterId, setCurrentChapterId] = useState<string | null>(null);
 
     const contentRef = useRef(content);
     useEffect(() => {
@@ -63,6 +70,10 @@ export function BookProvider({ children }: { children: ReactNode }) {
         setReadingTextState(text);
         if (title !== undefined) setReadingTitle(title);
     }, []);
+    const setBookIds = useCallback((isbn: string, chapterId: string) => {
+        setCurrentIsbn(isbn);
+        setCurrentChapterId(chapterId);
+    }, []);
 
     const value = useMemo(() => ({
         ...content,
@@ -70,13 +81,18 @@ export function BookProvider({ children }: { children: ReactNode }) {
         flipKey,
         readingText,
         readingTitle,
+        currentIsbn,
+        currentChapterId,
+        setBookIds,
         setBookContent,
         updateBookContent,
         setOverlayContent: setOverlayContentStable,
         setReadingText,
         triggerFlip,
+        activeGazeId,
+        setActiveGazeId,
         prevContent
-    }), [content, overlayContent, flipKey, readingText, readingTitle, setBookContent, updateBookContent, setOverlayContentStable, setReadingText, triggerFlip, prevContent]);
+    }), [content, overlayContent, flipKey, readingText, readingTitle, currentIsbn, currentChapterId, setBookIds, setBookContent, updateBookContent, setOverlayContentStable, setReadingText, triggerFlip, activeGazeId, prevContent]);
 
     return (
         <BookContext.Provider value={value}>

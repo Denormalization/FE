@@ -5,7 +5,7 @@ import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { toast } from 'react-toastify';
 import { useBook } from '@/context/bookContext';
-import { getOAuthRedirectUrl, login, refresh, setTokens } from '@/lib/auth';
+import { getOAuthRedirectUrl, login, refresh, setTokens, getMe, handleRoleRedirection } from '@/lib/auth';
 
 export default function Login() {
     const router = useRouter();
@@ -49,7 +49,7 @@ export default function Login() {
             });
 
             setTokens(accessToken, refreshToken);
-            router.push('/home');
+            handleRoleRedirection(router, 'push');
         } catch (err) {
             toast.error(
                 err instanceof Error ? err.message : '로그인에 실패했습니다.'
@@ -157,8 +157,8 @@ export default function Login() {
 
     useEffect(() => {
         refresh()
-            .then(() => router.replace('/home'))
-            .catch(() => {})
+            .then(() => handleRoleRedirection(router, 'replace'))
+            .catch(() => { })
             .finally(() => setIsCheckingAuth(false));
     }, [router]);
 

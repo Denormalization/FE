@@ -1,11 +1,12 @@
 import type { Metadata } from "next";
 import { Noto_Sans_KR, Noto_Serif_KR } from "next/font/google";
+import React, { Suspense } from "react";
 import { ToastContainer } from "react-toastify";
 import "react-toastify/dist/ReactToastify.css";
 import "@/styles/globals.css";
 import TopLoadingBar from "@/components/layout/TopLoadingBar";
 import { BookProvider } from "@/context/bookContext";
-import BookShell from "@/components/layout/bookShell";
+import LayoutWrapper from "@/components/layout/layoutWrapper";
 
 const notoSansKR = Noto_Sans_KR({
   subsets: ["latin"],
@@ -39,9 +40,9 @@ export default function RootLayout({
         style={{ fontFamily: "'Diphylleia', serif" }}
       >
         <BookProvider>
-          <BookShell>
+          <LayoutWrapper>
             {children}
-          </BookShell>
+          </LayoutWrapper>
         </BookProvider>
 
         <ToastContainer
@@ -50,7 +51,9 @@ export default function RootLayout({
           theme="light"
         />
 
-        <TopLoadingBar />
+        <Suspense fallback={null}>
+          <TopLoadingBar />
+        </Suspense>
       </body>
     </html>
   );

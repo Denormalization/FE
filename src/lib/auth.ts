@@ -6,6 +6,8 @@ import type {
   RefreshResponse,
   SignUpRequest,
   SignUpResponse,
+  User,
+  UserRole,
 } from '@/types/auth';
 
 export type {
@@ -16,6 +18,8 @@ export type {
   RefreshResponse,
   SignUpRequest,
   SignUpResponse,
+  User,
+  UserRole,
 } from '@/types/auth';
 
 const API_BASE =
@@ -211,6 +215,44 @@ export function clearTokens(): void {
   window.localStorage.removeItem(STORAGE_REFRESH);
 }
 
+export async function getMe(): Promise<User> {
+  const accessToken = getAccessToken();
+  if (!accessToken) {
+    throw new Error('로그인 정보가 없습니다.');
+  }
+
+  const url = `${API_URL}/api/v1/users/me`;
+  const res = await fetch(url, {
+    method: 'GET',
+    headers: {
+      'Authorization': `Bearer ${accessToken}`,
+    },
+  });
+
+  if (!res.ok) {
+    const text = await res.text();
+    throw new Error(text || `사용자 정보를 가져오는데 실패했습니다 (${res.status})`);
+  }
+
+  return (await res.json()) as User;
+}
+
+export async function handleRoleRedirection(
+  router: { push: (path: string) => void; replace: (path: string) => void },
+  method: 'push' | 'replace' = 'push'
+): Promise<void> {
+  try {
+    const user = await getMe();
+    if (user.role === 'ADMIN') {
+      router[method]('/admin');
+    } else {
+      router[method]('/home');
+    }
+  } catch {
+    router[method]('/home');
+  }
+}
+
 export async function logout(): Promise<void> {
   const accessToken = getAccessToken();
   if (accessToken) {
@@ -222,7 +264,6 @@ export async function logout(): Promise<void> {
         },
       });
     } catch {
-      // 서버 에러 무시 — 로컬 토큰은 어차피 삭제
     }
   }
   clearTokens();
