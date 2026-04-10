@@ -1,6 +1,6 @@
 @import "tailwindcss";
 
-/* Font Family Classes - Using CSS Variables */
+
 .font-pretendard {
     font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", "Noto Sans KR", "Malgun Gothic", sans-serif !important;
 }

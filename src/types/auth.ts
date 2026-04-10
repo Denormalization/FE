@@ -33,14 +33,12 @@ export interface LoginResponse {
   expiresIn: number;
 }
 
-/** OAuth 토큰 응답 */
 export interface OAuthTokenResponse {
   accessToken: string;
   refreshToken: string;
   isNewUser: boolean;
 }
 
-/** 토큰 갱신 응답 */
 export interface RefreshResponse {
   accessToken: string;
   expiresIn: number;

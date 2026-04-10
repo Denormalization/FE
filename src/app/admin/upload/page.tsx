@@ -31,7 +31,7 @@ type UploadResponse = {
   }>;
 };
 
-/* ── 입력 폼 (한글 IME 보호용 별도 컴포넌트) ── */
+
 function MetadataForm({
   onUpload,
   loading,
@@ -82,7 +82,7 @@ function MetadataForm({
   );
 }
 
-/* ── 파일 드롭 영역 ── */
+
 function FileDropZone({
   file,
   onFileSelect,
@@ -172,7 +172,7 @@ function CoverImagePicker({
   );
 }
 
-/* ── 메인 페이지 ── */
+
 export default function AdminUploadPage() {
   const { setBookContent, updateBookContent } = useBook();
   const [file, setFile] = useState<File | null>(null);
@@ -251,21 +251,21 @@ export default function AdminUploadPage() {
   useEffect(() => {
     const left = (
       <div className="flex flex-col h-full p-8 pointer-events-auto overflow-y-auto">
-        {/* 헤더 */}
+
         <div className="mb-6">
           <p className="text-xs font-semibold text-amber-600 tracking-widest uppercase mb-1">Admin</p>
           <h1 className="text-xl font-bold text-stone-800 tracking-tight">책 업로드</h1>
           <p className="text-xs text-stone-400 mt-1">EPUB 또는 TXT 파일을 업로드하세요</p>
         </div>
 
-        {/* 구분선 */}
+
         <div className="w-12 h-0.5 bg-amber-400/60 rounded-full mb-6" />
 
-        {/* 파일 선택 */}
+
         <FileDropZone file={file} onFileSelect={handleFileSelect} />
         <CoverImagePicker coverImage={coverImage} onCoverImageSelect={handleCoverImageSelect} />
 
-        {/* 메타데이터 폼 or 업로드 버튼 */}
+
         <div className="mt-5">
           {isTxt ? (
             <MetadataForm onUpload={handleUpload} loading={loading} />
@@ -289,16 +289,16 @@ export default function AdminUploadPage() {
 
     const right = (
       <div className="flex flex-col h-full p-8 pointer-events-auto overflow-y-auto">
-        {/* 헤더 */}
+
         <div className="mb-6">
           <p className="text-xs font-semibold text-stone-500 tracking-widest uppercase mb-1">Result</p>
           <h2 className="text-xl font-bold text-stone-800 tracking-tight">업로드 결과</h2>
         </div>
 
-        {/* 구분선 */}
+
         <div className="w-12 h-0.5 bg-stone-300/60 rounded-full mb-6" />
 
-        {/* 결과 영역 */}
+
         <div className="flex-1 flex flex-col">
           {result ? (
             <div className={`

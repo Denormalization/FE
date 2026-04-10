@@ -46,21 +46,21 @@ export default function ReadFullFooter({
                     : 'opacity-0 translate-y-full pointer-events-none'
             }`}
         >
-            {/* 진행 슬라이더 */}
+
             <div className="flex-1 relative">
-                {/* 트랙 배경 */}
+
                 <div className={`h-1 rounded-full w-full ${borderColor.replace('border-', 'bg-').replace('-200', '-200')}`} />
-                {/* 진행 바 */}
+
                 <div
                     className="absolute top-0 left-0 h-1 bg-red-500 rounded-full transition-all"
                     style={{ width: `${progress}%` }}
                 />
-                {/* 슬라이더 핸들 (원형) */}
+
                 <div
                     className="absolute top-1/2 -translate-y-1/2 w-3 h-3 bg-red-500 rounded-full shadow-md transition-all"
                     style={{ left: `calc(${progress}% - 6px)` }}
                 />
-                {/* 숨겨진 range input */}
+
                 <input
                     type="range"
                     min={1}
@@ -71,12 +71,12 @@ export default function ReadFullFooter({
                 />
             </div>
 
-            {/* 페이지 표시 */}
+
             <div className={`${textColor} text-sm min-w-[80px]`}>
                 {sliderValue}/{totalPages}
             </div>
 
-            {/* 아이콘 버튼들 */}
+
             <div className="flex items-center gap-2">
                 <button
                     onClick={onSettingsClick}

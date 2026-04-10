@@ -5,7 +5,7 @@ import { usePathname, useSearchParams } from 'next/navigation';
 import nprogress from 'nprogress';
 import 'nprogress/nprogress.css';
 
-// NProgress CSS 커스터마이징
+
 const nprogressStyles = `
   #nprogress .bar {
     background: #BA3C3C !important;
@@ -26,7 +26,7 @@ export default function NProgressProvider() {
   const searchParams = useSearchParams();
 
   useEffect(() => {
-    // 스타일 주입
+
     if (typeof window !== 'undefined') {
       const styleElement = document.createElement('style');
       styleElement.textContent = nprogressStyles;
@@ -39,7 +39,7 @@ export default function NProgressProvider() {
   }, []);
 
   useEffect(() => {
-    // 페이지 이동 완료 시 프로그레스 종료
+
     nprogress.done();
   }, [pathname, searchParams]);
 

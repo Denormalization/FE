@@ -35,10 +35,10 @@ export default function ViewerSettingsPanel({
 
     return (
         <div className="absolute bottom-16 right-4 w-[320px] bg-white rounded-xl shadow-[0_4px_24px_rgba(0,0,0,0.15)] border border-gray-100 z-50 p-6 flex flex-col gap-5">
-            {/* 타이틀 */}
+
             <h3 className="text-base font-semibold text-gray-800">뷰어 설정</h3>
 
-            {/* 테마 */}
+
             <div className="flex items-center justify-between">
                 <span className="text-sm text-gray-600">테마</span>
                 <div className="flex gap-2">
@@ -62,7 +62,7 @@ export default function ViewerSettingsPanel({
                 </div>
             </div>
 
-            {/* 글꼴 */}
+
             <div className="flex items-center justify-between">
                 <span className="text-sm text-gray-600">글꼴</span>
                 <div className="flex gap-2">
@@ -84,7 +84,7 @@ export default function ViewerSettingsPanel({
                 </div>
             </div>
 
-            {/* 글자 크기 */}
+
             <div className="flex items-center justify-between">
                 <span className="text-sm text-gray-600">글자 크기</span>
                 <div className="flex items-center gap-3">
@@ -110,7 +110,7 @@ export default function ViewerSettingsPanel({
                 </div>
             </div>
 
-            {/* 줄 간격 */}
+
             <div className="flex items-center justify-between">
                 <span className="text-sm text-gray-600">줄 간격</span>
                 <div className="flex items-center gap-3">
@@ -136,7 +136,7 @@ export default function ViewerSettingsPanel({
                 </div>
             </div>
 
-            {/* 여백 */}
+
             <div className="flex items-center justify-between">
                 <span className="text-sm text-gray-600">여백</span>
                 <div className="flex items-center gap-3">
@@ -162,7 +162,7 @@ export default function ViewerSettingsPanel({
                 </div>
             </div>
 
-            {/* 설정 초기화 */}
+
             <button
                 onClick={handleReset}
                 className="self-end text-xs text-gray-400 hover:text-gray-600 cursor-pointer transition-colors"
