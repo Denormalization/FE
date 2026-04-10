@@ -3,10 +3,16 @@
 import { useEffect, useRef, useState } from 'react';
 import { EyeTrackProps } from '@/types/eyeTrack';
 
+declare global {
+    interface Window {
+        webgazer: any;
+    }
+}
+
 export default function EyeTrack({ onGazeUpdate }: EyeTrackProps) {
-    const [dotPos, setDotPos] = useState({ x: 0, y: 0 });
-    const targetPosRef = useRef({ x: 0, y: 0 });
-    const currentPosRef = useRef({ x: 0, y: 0 });
+    const [dotPos, setDotPos] = useState({ x: 500, y: 500 });
+    const targetPosRef = useRef({ x: 500, y: 500 });
+    const currentPosRef = useRef({ x: 500, y: 500 });
 
     const initializedRef = useRef(false);
     const gazeBufferRef = useRef<{ x: number; y: number }[]>([]);
@@ -28,9 +34,6 @@ export default function EyeTrack({ onGazeUpdate }: EyeTrackProps) {
     }, [onGazeUpdate]);
 
     useEffect(() => {
-        if (initializedRef.current) return;
-        initializedRef.current = true;
-
         if (typeof window !== 'undefined') {
             if (!(window as any).WebGazerConfig) {
                 (window as any).WebGazerConfig = {};
@@ -62,15 +65,16 @@ export default function EyeTrack({ onGazeUpdate }: EyeTrackProps) {
         };
 
         const initWebGazer = () => {
-            if (!window.webgazer || (window as any).webgazerInitialized) return;
-            (window as any).webgazerInitialized = true;
+            if (!window.webgazer) return;
 
             updateSentenceRects();
-            const rectInterval = setInterval(updateSentenceRects, 3000);
+            const rectInterval = setInterval(updateSentenceRects, 200);
 
             try {
                 window.webgazer.setGazeListener((data: any) => {
-                    if (!data) return;
+                    if (!data || typeof data.x !== 'number' || typeof data.y !== 'number' || Number.isNaN(data.x) || Number.isNaN(data.y)) {
+                        return;
+                    }
 
                     const now = Date.now();
                     const dt = lastPointRef.current ? now - lastPointRef.current.t : 16;
@@ -233,23 +237,22 @@ export default function EyeTrack({ onGazeUpdate }: EyeTrackProps) {
                         const yDiff = Math.abs(avgY - rectCenterY);
                         const xDiff = Math.abs(avgX - rectCenterX);
 
-                        if (yDiff < 200) {
-                            const snapFactorY = isFixatingRef.current ? 0.95 : 0.75;
-                            finalY = avgY + (rectCenterY - avgY) * snapFactorY;
-
-                            if (xDiff < 550) {
-                                const snapFactorX = isFixatingRef.current ? 0.9 : 0.65;
-                                finalX = avgX + (rectCenterX - avgX) * snapFactorX;
-                                const errorX = rectCenterX - avgX;
-                                driftOffsetRef.current.x = Math.max(-300, Math.min(300, driftOffsetRef.current.x * 0.999 + errorX * 0.003));
-                            }
-
+                        if (yDiff < 300 && xDiff < 700) {
+                            finalY = rect.bottom - 8;
+                            finalX = rectCenterX;
+                            
+                            const errorX = rectCenterX - avgX;
                             const errorY = rectCenterY - avgY;
-                            driftOffsetRef.current.y = Math.max(-400, Math.min(400, driftOffsetRef.current.y * 0.999 + errorY * 0.006));
+                            if (!Number.isNaN(errorX) && !Number.isNaN(errorY)) {
+                                driftOffsetRef.current.x = Math.max(-300, Math.min(300, driftOffsetRef.current.x * 0.999 + errorX * 0.003));
+                                driftOffsetRef.current.y = Math.max(-400, Math.min(400, driftOffsetRef.current.y * 0.999 + errorY * 0.006));
+                            }
                         }
                     }
 
-                    targetPosRef.current = { x: finalX, y: finalY };
+                    if (!Number.isNaN(finalX) && !Number.isNaN(finalY)) {
+                        targetPosRef.current = { x: finalX, y: finalY };
+                    }
 
                     if (Math.hypot(finalX - lastTrailPosRef.current.x, finalY - lastTrailPosRef.current.y) > 12) {
                         const newId = Date.now();
@@ -280,86 +283,107 @@ export default function EyeTrack({ onGazeUpdate }: EyeTrackProps) {
                         dwellCountRef.current = 0;
                         candidateIdRef.current = null;
                     }
-                }).begin();
+                });
 
-                window.webgazer
-                    .showVideoPreview(false)
-                    .showPredictionPoints(false)
-                    .applyKalmanFilter(true);
+                if (window.webgazer) {
+                    window.webgazer
+                        .showVideoPreview(false)
+                        .showPredictionPoints(false)
+                        .applyKalmanFilter(true);
 
-                if (window.webgazer.params) {
-                    window.webgazer.params.showVideo = false;
-                    window.webgazer.params.showFaceOverlay = false;
-                    window.webgazer.params.showFaceFeedbackBox = false;
+                    if (window.webgazer.params) {
+                        window.webgazer.params.showVideo = false;
+                        window.webgazer.params.showFaceOverlay = false;
+                        window.webgazer.params.showFaceFeedbackBox = false;
+                    }
+
+                    try {
+                        if ((window as any).webgazerStarted && !(window as any).webgazerEnded) {
+                            window.webgazer.resume();
+                        } else {
+                            window.webgazer.begin();
+                            (window as any).webgazerStarted = true;
+                            (window as any).webgazerEnded = false;
+                        }
+                    } catch (e) {
+                        console.error('Failed to start webgazer:', e);
+                    }
                 }
 
-                const animate = () => {
-                    const lerpFactor = isFixatingRef.current ? 0.08 : 0.15;
-                    currentPosRef.current.x += (targetPosRef.current.x - currentPosRef.current.x) * lerpFactor;
-                    currentPosRef.current.y += (targetPosRef.current.y - currentPosRef.current.y) * lerpFactor;
-
-                    setDotPos({ x: currentPosRef.current.x, y: currentPosRef.current.y });
-
-                    setTrail(prev => {
-                        const updated = prev
-                            .map(p => ({
-                                ...p,
-                                opacity: p.opacity * 0.975,
-                                scale: p.scale * 0.985
-                            }))
-                            .filter(p => p.opacity > 0.02);
-
-                        return updated;
-                    });
-
-
-                    animationFrameRef.current = requestAnimationFrame(animate);
-                };
-
-                animationFrameRef.current = requestAnimationFrame(animate);
-
             } catch (err) {
+                console.error('WebGazer init failed:', err);
             }
 
             return () => {
                 clearInterval(rectInterval);
-                if (animationFrameRef.current) cancelAnimationFrame(animationFrameRef.current);
             };
         };
 
 
+        let cleanupInit: (() => void) | null | undefined = null;
+        const initWrapper = () => {
+            if (!(window as any)._webgazerInitCalled) {
+                (window as any)._webgazerInitCalled = true;
+                cleanupInit = initWebGazer();
+            }
+        };
+
         if (window.webgazer) {
-            initWebGazer();
+            initWrapper();
         } else {
-            const script = document.createElement('script');
-            script.src = SCRIPT_URL;
-            script.async = true;
-            script.onload = initWebGazer;
-            document.body.appendChild(script);
+            const existingScript = document.querySelector('script[src="' + SCRIPT_URL + '"]');
+            if (existingScript) {
+                existingScript.addEventListener('load', initWrapper);
+            } else {
+                const script = document.createElement('script');
+                script.src = SCRIPT_URL;
+                script.async = true;
+                script.onload = initWrapper;
+                document.body.appendChild(script);
+            }
         }
 
         return () => {
             resizeObserver.disconnect();
-            if (window.webgazer) {
-                try {
-                    window.webgazer.pause();
-                    window.webgazer.end();
-                    (window as any).webgazerInitialized = false;
-                    const video = document.getElementById('webgazerVideoFeed') as HTMLVideoElement;
-                    if (video && video.srcObject) {
-                        const stream = video.srcObject as MediaStream;
-                        stream.getTracks().forEach((track) => track.stop());
-                    }
-                    ['webgazerVideoContainer', 'webgazerVideoFeed', 'webgazerFaceOverlay', 'webgazerFaceFeedbackBox']
-                        .forEach((id) => {
-                            const el = document.getElementById(id);
-                            if (el) el.remove();
-                        });
-                } catch (e) {
-                }
-            }
+            if (cleanupInit) cleanupInit();
+            (window as any)._webgazerInitCalled = false;
         };
-    }, [onGazeUpdate]);
+    }, []);
+
+    useEffect(() => {
+        const animate = () => {
+            if (Number.isNaN(currentPosRef.current.x) || Number.isNaN(currentPosRef.current.y)) {
+                currentPosRef.current = { x: window.innerWidth / 2, y: window.innerHeight / 2 };
+            }
+
+            const lerpFactor = isFixatingRef.current ? 0.08 : 0.15;
+            currentPosRef.current.x += (targetPosRef.current.x - currentPosRef.current.x) * lerpFactor;
+            currentPosRef.current.y += (targetPosRef.current.y - currentPosRef.current.y) * lerpFactor;
+
+            if (!Number.isNaN(currentPosRef.current.x) && !Number.isNaN(currentPosRef.current.y)) {
+                setDotPos({ x: currentPosRef.current.x, y: currentPosRef.current.y });
+            }
+
+            setTrail(prev => {
+                const updated = prev
+                    .map(p => ({
+                        ...p,
+                        opacity: p.opacity * 0.975,
+                        scale: p.scale * 0.985
+                    }))
+                    .filter(p => p.opacity > 0.02);
+
+                return updated;
+            });
+
+            animationFrameRef.current = requestAnimationFrame(animate);
+        };
+
+        animationFrameRef.current = requestAnimationFrame(animate);
+        return () => {
+            if (animationFrameRef.current) cancelAnimationFrame(animationFrameRef.current);
+        };
+    }, []);
 
     return (
         <>
@@ -369,14 +393,14 @@ export default function EyeTrack({ onGazeUpdate }: EyeTrackProps) {
                         key={t.id}
                         className="absolute rounded-full pointer-events-none"
                         style={{
-                            left: t.x,
-                            top: t.y,
+                            left: `${t.x}px`,
+                            top: `${t.y}px`,
                             width: `${65 * t.scale}px`,
                             height: `${65 * t.scale}px`,
                             opacity: t.opacity,
                             transform: 'translate(-50%, -50%)',
                             background: 'radial-gradient(circle, rgba(188, 230, 143, 0.5) 0%, rgba(188, 230, 143, 0) 75%)',
-                            mixBlendMode: 'plus-lighter',
+                            mixBlendMode: 'plus-lighter' as any,
                             filter: 'blur(8px)',
                         }}
                     />
@@ -385,8 +409,8 @@ export default function EyeTrack({ onGazeUpdate }: EyeTrackProps) {
                 <div
                     className="absolute rounded-full"
                     style={{
-                        left: dotPos.x,
-                        top: dotPos.y,
+                        left: `${dotPos.x}px`,
+                        top: `${dotPos.y}px`,
                         width: '45px',
                         height: '45px',
                         transform: 'translate(-50%, -50%)',
@@ -426,7 +450,14 @@ export default function EyeTrack({ onGazeUpdate }: EyeTrackProps) {
                 #webgazerVideoContainer,
                 #webgazerFaceOverlay,
                 #webgazerFaceFeedbackBox {
-                    display: none !important;
+                    pointer-events: none !important;
+                    position: fixed !important;
+                    top: 0 !important;
+                    left: 0 !important;
+                    width: 1px !important;
+                    height: 1px !important;
+                    clip-path: circle(0) !important;
+                    z-index: 99999 !important;
                 }
             `}</style>
         </>

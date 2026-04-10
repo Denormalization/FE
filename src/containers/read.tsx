@@ -81,16 +81,27 @@ export default function Read() {
     const stickyTimeoutRef = useRef<any>(null);
     const gazeStartTimeRef = useRef<number | null>(null);
     const currentBookInfoRef = useRef<{ isbn: number; chapterId: number }>({ isbn: 1, chapterId: 1 });
-
     const pages = useMemo(() => {
-        const allSentences = POEM_TEXT.split(/(?<=[.!?])\s+|(?<=\n)/).filter(s => s.trim().length > 0);
+        const textToSplit = readingText || POEM_TEXT;
+        const allSentences = textToSplit.split(/(?<=[.!?])\s+|(?<=\n)/).filter(s => s.trim().length > 0);
         const pageSize = 12;
         const result = [];
         for (let i = 0; i < allSentences.length; i += pageSize) {
             result.push(allSentences.slice(i, i + pageSize).join(' '));
         }
         return result;
-    }, []);
+    }, [readingText]);
+
+    const currentPageRef = useRef(currentPage);
+    const pagesRef = useRef(pages);
+
+    useEffect(() => {
+        currentPageRef.current = currentPage;
+    }, [currentPage]);
+
+    useEffect(() => {
+        pagesRef.current = pages;
+    }, [pages]);
 
     useEffect(() => {
         const leftPage = pages[currentPage] || '';
@@ -172,6 +183,8 @@ export default function Read() {
         if (id && id.startsWith('right-sentence-') && !isFlippingRef.current) {
             const parts = id.split('-');
             const sentenceIdx = parseInt(parts[parts.length - 1] || '0');
+            const pages = pagesRef.current;
+            const currentPage = currentPageRef.current;
             const rightPageSentences = (pages[currentPage + 1] || '').split(/(?<=[.!?])\s+|(?<=\n)/).filter(s => s.trim().length > 0);
 
             if (sentenceIdx === rightPageSentences.length - 1) {
@@ -185,7 +198,7 @@ export default function Read() {
                 }
             }
         }
-    }, [currentPage, pages, setActiveGazeId]);
+    }, [setActiveGazeId]);
     useEffect(() => {
         const raw = localStorage.getItem('lastRead');
         if (raw) {
@@ -228,9 +241,15 @@ export default function Read() {
     }, [setBookContent, readingText, setReadingText]);
 
     useEffect(() => {
-        setOverlayContent(<EyeTrack onGazeUpdate={handleGazeUpdate} />);
-        return () => setOverlayContent(null);
-    }, [handleGazeUpdate, setOverlayContent]);
+        const timer = setTimeout(() => {
+            setOverlayContent(<EyeTrack onGazeUpdate={handleGazeUpdate} />);
+        }, 1500);
+
+        return () => {
+            clearTimeout(timer);
+            setOverlayContent(null);
+        };
+    }, [handleGazeUpdate, setOverlayContent, currentPage]);
 
     if (!loaded) return null;
 
