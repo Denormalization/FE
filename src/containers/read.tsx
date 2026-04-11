@@ -1,6 +1,8 @@
 'use client';
 
 import { useEffect, useState, useMemo, useRef, useCallback } from 'react';
+import { createPortal } from 'react-dom';
+
 import { useRouter } from 'next/navigation';
 import { useBook } from '@/context/bookContext';
 import { POEM_TEXT } from '@/mock/read';
@@ -84,6 +86,8 @@ export default function Read() {
 
     const suggestionTimeoutRef = useRef<any>(null);
     const [suggestion, setSuggestion] = useState<{ id: string; x: number; y: number; text: string } | null>(null);
+    const setSuggestionRef = useRef(setSuggestion);
+    useEffect(() => { setSuggestionRef.current = setSuggestion; }, [setSuggestion]);
 
     const pages = useMemo(() => {
         const textToSplit = readingText || POEM_TEXT;
@@ -130,30 +134,6 @@ export default function Read() {
                 suggestionTimeoutRef.current = null;
             }
 
-            if (gazeStartTimeRef.current) {
-                const dwellTime = now - gazeStartTimeRef.current;
-                if (dwellTime >= 100) {
-                    const el = document.getElementById(stickyIdRef.current);
-                    if (el) {
-                        const textContent = el.textContent || "";
-                        const text = textContent.trim();
-                        if (text) {
-                            const eventKey = `${bookInfo.isbn}-${bookInfo.chapterId}-${text}`;
-                            if (!recordedSentencesRef.current.has(eventKey)) {
-                                recordGazeEvent({
-                                    bookId: bookInfo.isbn,
-                                    chapterId: bookInfo.chapterId,
-                                    text: text,
-                                    dwellTime: dwellTime,
-                                    timestamp: new Date().toISOString()
-                                }).then(() => {
-                                    recordedSentencesRef.current.add(eventKey);
-                                }).catch(() => { });
-                            }
-                        }
-                    }
-                }
-            }
             gazeStartTimeRef.current = null;
         }
 
@@ -163,55 +143,52 @@ export default function Read() {
                 stickyTimeoutRef.current = null;
             }
             if (stickyIdRef.current !== id) {
+                // 새 문장으로 이동: 기존 타이머 취소 후 새로 시작
+                if (suggestionTimeoutRef.current) {
+                    clearTimeout(suggestionTimeoutRef.current);
+                    suggestionTimeoutRef.current = null;
+                }
                 gazeStartTimeRef.current = now;
                 stickyIdRef.current = id;
                 setActiveGazeId(id);
-                setSuggestion(null);
+                setSuggestionRef.current(null);
 
-                if (suggestionTimeoutRef.current) clearTimeout(suggestionTimeoutRef.current);
                 suggestionTimeoutRef.current = setTimeout(() => {
                     const el = document.getElementById(id);
                     if (el) {
                         const rect = el.getBoundingClientRect();
-                        setSuggestion({
+                        const text = el.textContent?.trim() || "";
+                        setSuggestionRef.current({
                             id: id,
-                            x: rect.left + rect.width / 2,
-                            y: rect.top - 20,
-                            text: el.textContent?.trim() || ""
+                            x: rect.right,
+                            y: rect.top,
+                            text: text
                         });
+                        if (text) {
+                            const bInfo = currentBookInfoRef.current;
+                            const eventKey = `${bInfo.isbn}-${bInfo.chapterId}-${text}`;
+                            if (!recordedSentencesRef.current.has(eventKey)) {
+                                recordGazeEvent({
+                                    bookId: bInfo.isbn,
+                                    chapterId: bInfo.chapterId,
+                                    text: text,
+                                    dwellTime: Date.now() - (gazeStartTimeRef.current ?? Date.now()),
+                                    timestamp: new Date().toISOString()
+                                }).then(() => {
+                                    recordedSentencesRef.current.add(eventKey);
+                                }).catch(() => { });
+                            }
+                        }
                     }
                 }, 4000);
             }
+            // 같은 문장에 계속 머무르는 경우: 타이머 유지 (건드리지 않음)
         } else {
             if (!stickyTimeoutRef.current && stickyIdRef.current) {
                 stickyTimeoutRef.current = setTimeout(() => {
-                    const finalDwellTime = Date.now() - (gazeStartTimeRef.current || now);
-
                     if (suggestionTimeoutRef.current) {
                         clearTimeout(suggestionTimeoutRef.current);
                         suggestionTimeoutRef.current = null;
-                    }
-
-                    if (gazeStartTimeRef.current && finalDwellTime >= 100 && stickyIdRef.current) {
-                        const el = document.getElementById(stickyIdRef.current);
-                        if (el) {
-                            const textContent = el.textContent || "";
-                            const text = textContent.trim();
-                            if (text) {
-                                const eventKey = `${bookInfo.isbn}-${bookInfo.chapterId}-${text}`;
-                                if (!recordedSentencesRef.current.has(eventKey)) {
-                                    recordGazeEvent({
-                                        bookId: bookInfo.isbn,
-                                        chapterId: bookInfo.chapterId,
-                                        text: text,
-                                        dwellTime: finalDwellTime,
-                                        timestamp: new Date().toISOString()
-                                    }).then(() => {
-                                        recordedSentencesRef.current.add(eventKey);
-                                    }).catch(() => { });
-                                }
-                            }
-                        }
                     }
                     setActiveGazeId(null);
                     gazeStartTimeRef.current = null;
@@ -266,62 +243,75 @@ export default function Read() {
     const navButtonStyle = "flex h-14 w-28 items-center justify-center rounded-lg text-white font-bold bg-gradient-to-br from-[#409659] to-[#38844E] shadow-[0_4px_10px_rgba(0,0,0,0.2)] transition-all duration-300 hover:translate-x-20 hover:scale-105 hover:shadow-[5px_5px_15px_rgba(0,0,0,0.3)] hover:brightness-110 active:scale-95 cursor-pointer pr-4 -ml-14 text-base";
 
     return (
-        <div className="absolute inset-0 z-[100] pointer-events-none">
-            <div className="relative w-[80rem] h-[50rem] mx-auto">
-                <div className="absolute -right-6 bottom-0 flex flex-col gap-2 pointer-events-auto">
-                    <button className={navButtonStyle}>
-                        원작 보기
-                    </button>
-                    <button onClick={() => router.push('/read/full')} className={navButtonStyle}>
-                        전체 보기
-                    </button>
+        <>
+            <div className="absolute inset-0 z-[100] pointer-events-none">
+                <div className="relative w-[80rem] h-[50rem] mx-auto">
+                    <div className="absolute -right-6 bottom-0 flex flex-col gap-2 pointer-events-auto">
+                        <button className={navButtonStyle}>
+                            원작 보기
+                        </button>
+                        <button onClick={() => router.push('/read/full')} className={navButtonStyle}>
+                            전체 보기
+                        </button>
+                    </div>
                 </div>
             </div>
 
-            {suggestion && (
+            {suggestion && typeof document !== 'undefined' && createPortal(
                 <div
                     style={{
                         position: 'fixed',
-                        left: `${suggestion.x}px`,
-                        top: `${suggestion.y}px`,
-                        transform: 'translate(-50%, -100%)',
-                        zIndex: 20000,
+                        left: `${suggestion.x + 12}px`,
+                        top: `${suggestion.y - 8}px`,
+                        zIndex: 2147483647,
                     }}
-                    className="pointer-events-auto animate-in fade-in zoom-in slide-in-from-bottom-4 duration-500"
+                    className="pointer-events-auto"
                 >
-                    <div className="relative bg-white p-6 rounded-[2rem] shadow-[0_20px_50px_rgba(0,0,0,0.15)] flex flex-col items-center min-w-[320px] max-w-[400px]">
-                        <div className="text-[#E0E0E0] text-4xl font-serif mb-1 leading-none self-center h-6 select-none relative">
-                            <span className="absolute left-1/2 -translate-x-1/2 top-[-10px]">66</span>
-                        </div>
-                        
-                        <h3 className="text-2xl font-bold font-bookmyungjo text-[#222] mb-3 text-center">
-                            각색하시겠습니까?
-                        </h3>
-                        
-                        <p className="text-gray-400 text-sm font-bookmyungjo text-center leading-relaxed">
-                            이 문장을 당신만의 시선으로 <br /> 새롭게 그려보세요
-                        </p>
+                    <div
+                        style={{
+                            animation: 'suggestionIn 0.35s cubic-bezier(0.34,1.56,0.64,1) both',
+                            transformOrigin: 'top left',
+                        }}
+                        className="relative bg-white rounded-2xl shadow-[0_8px_32px_rgba(0,0,0,0.13)] border border-gray-100 flex flex-col items-start min-w-[220px] max-w-[280px] overflow-hidden"
+                    >
+                        <div className="w-full h-1 bg-gradient-to-r from-amber-400 to-orange-400" />
 
-                        <div className="mt-6 flex flex-col items-center gap-2">
-                             <button
-                                onClick={() => {
-                                    alert("각색을 시작합니다.");
-                                    setSuggestion(null);
-                                }}
-                                className="px-10 py-3 bg-[#222] text-white rounded-full font-bold text-sm hover:scale-105 active:scale-95 transition-all shadow-md"
-                            >
-                                각색 시작하기
-                            </button>
-                        </div>
-                        
-                        <div className="text-[#E0E0E0] text-4xl font-serif mt-4 leading-none self-center h-6 select-none relative">
-                            <span className="absolute left-1/2 -translate-x-1/2 bottom-[-10px]">99</span>
-                        </div>
+                        <div className="px-5 py-4 w-full">
+                            <h3 className="text-[15px] font-bold text-gray-800 mb-1 leading-snug font-bookmyungjo">
+                                각색하시겠습니까?
+                            </h3>
+                            <p className="text-[12px] text-gray-400 leading-relaxed mb-4 font-bookmyungjo">
+                                이 문장을 당신만의 시선으로<br />새롭게 그려보세요
+                            </p>
 
-                        <div className="absolute bottom-[-10px] left-1/2 -translate-x-1/2 w-0 h-0 border-l-[10px] border-l-transparent border-r-[10px] border-r-transparent border-t-[10px] border-t-white shadow-sm" />
+                            <div className="flex gap-2">
+                                <button
+                                    onClick={() => {
+                                        alert("각색을 시작합니다.");
+                                        setSuggestion(null);
+                                    }}
+                                    className="flex-1 py-2 bg-gray-900 text-white rounded-xl text-[12px] font-bold hover:bg-gray-700 active:scale-95 transition-all"
+                                >
+                                    시작하기
+                                </button>
+                                <button
+                                    onClick={() => setSuggestion(null)}
+                                    className="py-2 px-3 bg-gray-100 text-gray-500 rounded-xl text-[12px] font-medium hover:bg-gray-200 active:scale-95 transition-all"
+                                >
+                                    닫기
+                                </button>
+                            </div>
+                        </div>
                     </div>
-                </div>
+                    <style>{`
+                    @keyframes suggestionIn {
+                        from { opacity: 0; transform: scale(0.85) translateY(-6px); }
+                        to   { opacity: 1; transform: scale(1) translateY(0); }
+                    }
+                `}</style>
+                </div>,
+                document.body
             )}
-        </div>
+        </>
     );
 }
