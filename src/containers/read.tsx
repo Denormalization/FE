@@ -80,6 +80,7 @@ export default function Read() {
     const stickyTimeoutRef = useRef<any>(null);
     const gazeStartTimeRef = useRef<number | null>(null);
     const currentBookInfoRef = useRef({ isbn: 1, chapterId: 1 });
+    const recordedSentencesRef = useRef(new Set<string>());
 
     const suggestionTimeoutRef = useRef<any>(null);
     const [suggestion, setSuggestion] = useState<{ id: string; x: number; y: number; text: string } | null>(null);
@@ -137,13 +138,18 @@ export default function Read() {
                         const textContent = el.textContent || "";
                         const text = textContent.trim();
                         if (text) {
-                            recordGazeEvent({
-                                bookId: bookInfo.isbn,
-                                chapterId: bookInfo.chapterId,
-                                text: text,
-                                dwellTime: dwellTime,
-                                timestamp: new Date().toISOString()
-                            }).catch(() => { });
+                            const eventKey = `${bookInfo.isbn}-${bookInfo.chapterId}-${text}`;
+                            if (!recordedSentencesRef.current.has(eventKey)) {
+                                recordGazeEvent({
+                                    bookId: bookInfo.isbn,
+                                    chapterId: bookInfo.chapterId,
+                                    text: text,
+                                    dwellTime: dwellTime,
+                                    timestamp: new Date().toISOString()
+                                }).then(() => {
+                                    recordedSentencesRef.current.add(eventKey);
+                                }).catch(() => { });
+                            }
                         }
                     }
                 }
@@ -192,13 +198,18 @@ export default function Read() {
                             const textContent = el.textContent || "";
                             const text = textContent.trim();
                             if (text) {
-                                recordGazeEvent({
-                                    bookId: bookInfo.isbn,
-                                    chapterId: bookInfo.chapterId,
-                                    text: text,
-                                    dwellTime: finalDwellTime,
-                                    timestamp: new Date().toISOString()
-                                }).catch(() => { });
+                                const eventKey = `${bookInfo.isbn}-${bookInfo.chapterId}-${text}`;
+                                if (!recordedSentencesRef.current.has(eventKey)) {
+                                    recordGazeEvent({
+                                        bookId: bookInfo.isbn,
+                                        chapterId: bookInfo.chapterId,
+                                        text: text,
+                                        dwellTime: finalDwellTime,
+                                        timestamp: new Date().toISOString()
+                                    }).then(() => {
+                                        recordedSentencesRef.current.add(eventKey);
+                                    }).catch(() => { });
+                                }
                             }
                         }
                     }
