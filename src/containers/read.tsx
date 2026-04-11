@@ -1,6 +1,8 @@
 'use client';
 
 import { useEffect, useState, useMemo, useRef, useCallback } from 'react';
+import { createPortal } from 'react-dom';
+
 import { useRouter } from 'next/navigation';
 import { useBook } from '@/context/bookContext';
 import { POEM_TEXT } from '@/mock/read';
@@ -8,61 +10,60 @@ import EyeTrack from '@/components/layout/eyeTrack';
 import { fetchChapterContent } from '@/services/books';
 import { recordGazeEvent } from '@/services/gaze';
 
-const PageContent = ({
-    text,
-    delay = 0,
-    idPrefix
-}: {
+const PageContent = (props: {
     text: string;
     delay?: number;
     idPrefix: string;
 }) => {
+    const { text, delay = 0, idPrefix } = props;
     const [visible, setVisible] = useState(false);
     const { activeGazeId } = useBook();
 
     const sentences = useMemo(() => {
-        return text.split(/(?<=[.!?])\s+|(?<=\n)/).filter(s => s.trim().length > 0);
+        if (!text) return [];
+        const matches = text.match(/[^.!?\n]+[.!?]?\n*\s*/g);
+        if (!matches) return [];
+        return matches.map(s => s.trim()).filter(s => s.length > 0);
     }, [text]);
 
     useEffect(() => {
-        const t = setTimeout(() => {
+        const timer = setTimeout(() => {
             setVisible(true);
         }, delay);
-        return () => clearTimeout(t);
+        return () => clearTimeout(timer);
     }, [delay, text]);
 
+    const visibilityClass = visible
+        ? 'opacity-100 translate-y-0'
+        : 'opacity-0 -translate-y-10';
+
+    const pageStyle = {
+        clipPath: visible ? 'inset(0 0 0 0)' : 'inset(0 0 100% 0)',
+        maskImage: visible ? 'none' : 'linear-gradient(to bottom, black 70%, transparent 100%)',
+        WebkitMaskImage: visible ? 'none' : 'linear-gradient(to bottom, black 70%, transparent 100%)',
+        transition: 'all 2s ease-out'
+    };
+
     return (
-        <div className="flex h-full w-full px-24 py-[3rem]">
+        <div className="flex h-full w-full px-24 py-12">
             <div
-                className={`
-                    text-gray-700 text-xl leading-[2.5] text-justify
-                    transition-all duration-[2000ms] ease-out
-                    ${visible
-                        ? 'opacity-100 translate-y-0 [clip-path:inset(0_0_0_0)]'
-                        : 'opacity-0 -translate-y-10 [clip-path:inset(0_0_100%_0)] [mask-image:linear-gradient(to_bottom,black_70%,transparent_100%)]'}
-                `}
+                style={pageStyle}
+                className={"text-gray-700 text-xl leading-[2.5] text-justify " + visibilityClass}
             >
                 {sentences.map((sentence, idx) => {
-                    const sentenceId = `${idPrefix}-sentence-${idx}`;
+                    const sentenceId = idPrefix + "-sentence-" + idx;
                     const isActive = activeGazeId === sentenceId;
 
                     return (
                         <span
                             key={idx}
                             id={sentenceId}
-                            style={{
-                                WebkitBoxDecorationBreak: 'clone',
-                                boxDecorationBreak: 'clone',
-                            } as any}
-                            className={`
-                                transition-all duration-500 px-1 py-0.5 mx-0.5
-                                ${isActive
-                                    ? 'border-b-2 border-amber-400/80 z-10'
-                                    : 'text-gray-500 font-medium'
-                                }
-                            `}
+                            className={
+                                "transition-all duration-500 px-1 py-0.5 mx-0.5 " +
+                                (isActive ? "border-b-2 border-amber-400/80 z-10 bg-amber-100/30" : "text-gray-500 font-medium")
+                            }
                         >
-                            {sentence}{' '}
+                            {sentence + " "}
                         </span>
                     );
                 })}
@@ -80,25 +81,35 @@ export default function Read() {
     const stickyIdRef = useRef<string | null>(null);
     const stickyTimeoutRef = useRef<any>(null);
     const gazeStartTimeRef = useRef<number | null>(null);
-    const currentBookInfoRef = useRef<{ isbn: number; chapterId: number }>({ isbn: 1, chapterId: 1 });
+    const currentBookInfoRef = useRef({ isbn: 1, chapterId: 1 });
+    const recordedSentencesRef = useRef(new Set<string>());
+
+    const suggestionTimeoutRef = useRef<any>(null);
+    const [suggestion, setSuggestion] = useState<{ id: string; x: number; y: number; text: string } | null>(null);
+    const setSuggestionRef = useRef(setSuggestion);
+    useEffect(() => { setSuggestionRef.current = setSuggestion; }, [setSuggestion]);
+
     const pages = useMemo(() => {
         const textToSplit = readingText || POEM_TEXT;
-        const allSentences = textToSplit.split(/(?<=[.!?])\s+|(?<=\n)/).filter(s => s.trim().length > 0);
-        const pageSize = 12;
+        const all = [];
+        const matches = textToSplit.match(/[^.!?\n]+[.!?]?\n*\s*/g);
+        if (matches) {
+            all.push(...matches.map(s => s.trim()).filter(s => s.length > 0));
+        }
+
         const result = [];
-        for (let i = 0; i < allSentences.length; i += pageSize) {
-            result.push(allSentences.slice(i, i + pageSize).join(' '));
+        for (let i = 0; i < all.length; i += 12) {
+            result.push(all.slice(i, i + 12).join(' '));
         }
         return result;
     }, [readingText]);
 
     const currentPageRef = useRef(currentPage);
-    const pagesRef = useRef(pages);
-
     useEffect(() => {
         currentPageRef.current = currentPage;
     }, [currentPage]);
 
+    const pagesRef = useRef(pages);
     useEffect(() => {
         pagesRef.current = pages;
     }, [pages]);
@@ -118,25 +129,11 @@ export default function Read() {
         const bookInfo = currentBookInfoRef.current;
 
         if (stickyIdRef.current && stickyIdRef.current !== id) {
-            if (gazeStartTimeRef.current && bookInfo) {
-                const dwellTime = now - gazeStartTimeRef.current;
-
-                if (dwellTime >= 100) {
-                    const el = document.getElementById(stickyIdRef.current);
-                    if (el) {
-                        const text = el.textContent?.trim() || el.innerText?.trim();
-                        if (text) {
-                            recordGazeEvent({
-                                bookId: bookInfo.isbn,
-                                chapterId: bookInfo.chapterId,
-                                text,
-                                dwellTime,
-                                timestamp: new Date().toISOString()
-                            }).catch(() => { });
-                        }
-                    }
-                }
+            if (suggestionTimeoutRef.current) {
+                clearTimeout(suggestionTimeoutRef.current);
+                suggestionTimeoutRef.current = null;
             }
+
             gazeStartTimeRef.current = null;
         }
 
@@ -145,33 +142,54 @@ export default function Read() {
                 clearTimeout(stickyTimeoutRef.current);
                 stickyTimeoutRef.current = null;
             }
-
             if (stickyIdRef.current !== id) {
+                // 새 문장으로 이동: 기존 타이머 취소 후 새로 시작
+                if (suggestionTimeoutRef.current) {
+                    clearTimeout(suggestionTimeoutRef.current);
+                    suggestionTimeoutRef.current = null;
+                }
                 gazeStartTimeRef.current = now;
                 stickyIdRef.current = id;
                 setActiveGazeId(id);
-            }
-        } else {
-            if (!stickyTimeoutRef.current && stickyIdRef.current) {
-                stickyTimeoutRef.current = setTimeout(() => {
-                    const finalDwellTime = Date.now() - (gazeStartTimeRef.current || now);
+                setSuggestionRef.current(null);
 
-                    if (gazeStartTimeRef.current && bookInfo && finalDwellTime >= 100 && stickyIdRef.current) {
-                        const el = document.getElementById(stickyIdRef.current);
-                        if (el) {
-                            const text = el.textContent?.trim() || el.innerText?.trim();
-                            if (text) {
+                suggestionTimeoutRef.current = setTimeout(() => {
+                    const el = document.getElementById(id);
+                    if (el) {
+                        const rect = el.getBoundingClientRect();
+                        const text = el.textContent?.trim() || "";
+                        setSuggestionRef.current({
+                            id: id,
+                            x: rect.right,
+                            y: rect.top,
+                            text: text
+                        });
+                        if (text) {
+                            const bInfo = currentBookInfoRef.current;
+                            const eventKey = `${bInfo.isbn}-${bInfo.chapterId}-${text}`;
+                            if (!recordedSentencesRef.current.has(eventKey)) {
                                 recordGazeEvent({
-                                    bookId: bookInfo.isbn,
-                                    chapterId: bookInfo.chapterId,
-                                    text,
-                                    dwellTime: finalDwellTime,
+                                    bookId: bInfo.isbn,
+                                    chapterId: bInfo.chapterId,
+                                    text: text,
+                                    dwellTime: Date.now() - (gazeStartTimeRef.current ?? Date.now()),
                                     timestamp: new Date().toISOString()
+                                }).then(() => {
+                                    recordedSentencesRef.current.add(eventKey);
                                 }).catch(() => { });
                             }
                         }
                     }
-
+                }, 4000);
+            }
+            // 같은 문장에 계속 머무르는 경우: 타이머 유지 (건드리지 않음)
+        } else {
+            if (!stickyTimeoutRef.current && stickyIdRef.current) {
+                stickyTimeoutRef.current = setTimeout(() => {
+                    if (suggestionTimeoutRef.current) {
+                        clearTimeout(suggestionTimeoutRef.current);
+                        suggestionTimeoutRef.current = null;
+                    }
                     setActiveGazeId(null);
                     gazeStartTimeRef.current = null;
                     stickyIdRef.current = null;
@@ -181,14 +199,11 @@ export default function Read() {
         }
 
         if (id && id.startsWith('right-sentence-') && !isFlippingRef.current) {
-            const parts = id.split('-');
-            const sentenceIdx = parseInt(parts[parts.length - 1] || '0');
-            const pages = pagesRef.current;
-            const currentPage = currentPageRef.current;
-            const rightPageSentences = (pages[currentPage + 1] || '').split(/(?<=[.!?])\s+|(?<=\n)/).filter(s => s.trim().length > 0);
+            const rightPageSentences = (pagesRef.current[currentPageRef.current + 1] || '').split(/[.!?]\s+/);
+            const sentenceIdx = parseInt(id.split('-').pop() || '0');
 
             if (sentenceIdx === rightPageSentences.length - 1) {
-                if (currentPage + 2 < pages.length) {
+                if (currentPageRef.current + 2 < pagesRef.current.length) {
                     isFlippingRef.current = true;
                     setTimeout(() => {
                         setCurrentPage(prev => prev + 2);
@@ -199,97 +214,104 @@ export default function Read() {
             }
         }
     }, [setActiveGazeId]);
+
     useEffect(() => {
         const raw = localStorage.getItem('lastRead');
         if (raw) {
             try {
-                const { isbn, chapterId, title } = JSON.parse(raw);
-                currentBookInfoRef.current = { isbn: Number(isbn), chapterId: Number(chapterId) };
-
+                const info = JSON.parse(raw);
+                currentBookInfoRef.current = { isbn: Number(info.isbn), chapterId: Number(info.chapterId) };
                 if (!readingText) {
-                    fetchChapterContent(isbn, chapterId)
-                        .then((data) => {
-                            setReadingText(data.content, title);
-                            setBookContent(
-                                <PageContent text={data.content} idPrefix="left" />,
-                                <PageContent text={data.content} delay={1200} idPrefix="right" />
-                            );
-                            setLoaded(true);
-                        })
-                        .catch(() => {
-                            setLoaded(true);
-                        });
-                } else {
-                    setBookContent(
-                        <PageContent text={readingText} idPrefix="left" />,
-                        <PageContent text={readingText} delay={1200} idPrefix="right" />
-                    );
-                    setLoaded(true);
-                }
-            } catch {
-                setLoaded(true);
-            }
-        } else {
-            if (readingText) {
-                setBookContent(
-                    <PageContent text={readingText} idPrefix="left" />,
-                    <PageContent text={readingText} delay={1200} idPrefix="right" />
-                );
-            }
-            setLoaded(true);
-        }
-    }, [setBookContent, readingText, setReadingText]);
+                    fetchChapterContent(info.isbn, info.chapterId).then(data => {
+                        setReadingText(data.content, info.title);
+                        setLoaded(true);
+                    }).catch(() => setLoaded(true));
+                } else { setLoaded(true); }
+            } catch { setLoaded(true); }
+        } else { setLoaded(true); }
+    }, [readingText, setReadingText]);
 
     useEffect(() => {
-        const timer = setTimeout(() => {
-            setOverlayContent(<EyeTrack onGazeUpdate={handleGazeUpdate} />);
-        }, 1500);
-
+        setOverlayContent(<EyeTrack onGazeUpdate={handleGazeUpdate} />);
         return () => {
-            clearTimeout(timer);
             setOverlayContent(null);
         };
-    }, [handleGazeUpdate, setOverlayContent, currentPage]);
+    }, [handleGazeUpdate, setOverlayContent]);
 
     if (!loaded) return null;
 
+    const navButtonStyle = "flex h-14 w-28 items-center justify-center rounded-lg text-white font-bold bg-gradient-to-br from-[#409659] to-[#38844E] shadow-[0_4px_10px_rgba(0,0,0,0.2)] transition-all duration-300 hover:translate-x-20 hover:scale-105 hover:shadow-[5px_5px_15px_rgba(0,0,0,0.3)] hover:brightness-110 active:scale-95 cursor-pointer pr-4 -ml-14 text-base";
+
     return (
-        <div className="absolute inset-0 pointer-events-none">
-            <div className="relative w-[80rem] h-[50rem]">
-                <div className="absolute -right-6 bottom-0 flex flex-col gap-2 pointer-events-auto">
-                    <button
-                        className="
-                            flex h-14 w-28 items-center justify-center
-                            rounded-lg text-white font-bold
-                            bg-gradient-to-br from-[#409659] to-[#38844E]
-                            shadow-[0_4px_10px_rgba(0,0,0,0.2)]
-                            transition-all duration-300
-                            hover:translate-x-20 hover:scale-105 hover:shadow-[5px_5px_15px_rgba(0,0,0,0.3)] hover:brightness-110
-                            active:scale-95
-                            cursor-pointer
-                            pr-4 -ml-14 text-base
-                        "
-                    >
-                        원작 보기
-                    </button>
-                    <button
-                        onClick={() => router.push('/read/full')}
-                        className="
-                            flex h-14 w-28 items-center justify-center
-                            rounded-lg text-white font-bold
-                            bg-gradient-to-br from-[#409659] to-[#38844E]
-                            shadow-[0_4px_10px_rgba(0,0,0,0.2)]
-                            transition-all duration-300
-                            hover:translate-x-20 hover:scale-105 hover:shadow-[5px_5px_15px_rgba(0,0,0,0.3)] hover:brightness-110
-                            active:scale-95
-                            cursor-pointer
-                            pr-4 -ml-14 text-base
-                        "
-                    >
-                        전체 보기
-                    </button>
+        <>
+            <div className="absolute inset-0 z-[100] pointer-events-none">
+                <div className="relative w-[80rem] h-[50rem] mx-auto">
+                    <div className="absolute -right-6 bottom-0 flex flex-col gap-2 pointer-events-auto">
+                        <button className={navButtonStyle}>
+                            원작 보기
+                        </button>
+                        <button onClick={() => router.push('/read/full')} className={navButtonStyle}>
+                            전체 보기
+                        </button>
+                    </div>
                 </div>
             </div>
-        </div>
+
+            {suggestion && typeof document !== 'undefined' && createPortal(
+                <div
+                    style={{
+                        position: 'fixed',
+                        left: `${suggestion.x + 12}px`,
+                        top: `${suggestion.y - 8}px`,
+                        zIndex: 2147483647,
+                    }}
+                    className="pointer-events-auto"
+                >
+                    <div
+                        style={{
+                            animation: 'suggestionIn 0.35s cubic-bezier(0.34,1.56,0.64,1) both',
+                            transformOrigin: 'top left',
+                        }}
+                        className="relative bg-white rounded-2xl shadow-[0_8px_32px_rgba(0,0,0,0.13)] border border-gray-100 flex flex-col items-start min-w-[220px] max-w-[280px] overflow-hidden"
+                    >
+                        <div className="w-full h-1 bg-gradient-to-r from-amber-400 to-orange-400" />
+
+                        <div className="px-5 py-4 w-full">
+                            <h3 className="text-[15px] font-bold text-gray-800 mb-1 leading-snug font-bookmyungjo">
+                                각색하시겠습니까?
+                            </h3>
+                            <p className="text-[12px] text-gray-400 leading-relaxed mb-4 font-bookmyungjo">
+                                이 문장을 당신만의 시선으로<br />새롭게 그려보세요
+                            </p>
+
+                            <div className="flex gap-2">
+                                <button
+                                    onClick={() => {
+                                        alert("각색을 시작합니다.");
+                                        setSuggestion(null);
+                                    }}
+                                    className="flex-1 py-2 bg-gray-900 text-white rounded-xl text-[12px] font-bold hover:bg-gray-700 active:scale-95 transition-all"
+                                >
+                                    시작하기
+                                </button>
+                                <button
+                                    onClick={() => setSuggestion(null)}
+                                    className="py-2 px-3 bg-gray-100 text-gray-500 rounded-xl text-[12px] font-medium hover:bg-gray-200 active:scale-95 transition-all"
+                                >
+                                    닫기
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                    <style>{`
+                    @keyframes suggestionIn {
+                        from { opacity: 0; transform: scale(0.85) translateY(-6px); }
+                        to   { opacity: 1; transform: scale(1) translateY(0); }
+                    }
+                `}</style>
+                </div>,
+                document.body
+            )}
+        </>
     );
 }
