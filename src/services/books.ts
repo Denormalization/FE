@@ -10,7 +10,7 @@ export interface BookItem {
   title: string;
   authors: string[];
   publisher: string;
-  coverUrl: string;
+  coverUrl: string | null;
   genres: string[];
 }
 
@@ -71,7 +71,7 @@ export interface BookDetail {
   description: string;
   authors: string[];
   publisher: string;
-  coverUrl: string;
+  coverUrl: string | null;
   genres: string[];
   totalChars: number;
   chapters: Chapter[];

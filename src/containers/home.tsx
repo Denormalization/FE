@@ -133,9 +133,21 @@ export function LeftHomeContent({
     );
 }
 
-export function RightHomeContent({ books }: { books: BookItem[] }) {
+export function RightHomeContent({
+    books,
+    page,
+    totalPages,
+    onPrevPage,
+    onNextPage,
+}: {
+    books: BookItem[];
+    page: number;
+    totalPages: number;
+    onPrevPage: () => void;
+    onNextPage: () => void;
+}) {
     return (
-        <div className="flex h-full w-full flex-col px-24 py-[4.5rem]">
+        <div className="relative flex h-full w-full flex-col px-24 pt-[4.5rem]">
             {books.length > 0 ? (
                 <div className="grid grid-cols-2 gap-x-20 gap-y-6">
                     {books.map(book => (
@@ -143,6 +155,33 @@ export function RightHomeContent({ books }: { books: BookItem[] }) {
                     ))}
                 </div>
             ) : null}
+
+            <div className="absolute bottom-6 right-8 flex items-center gap-3">
+                {page > 0 && (
+                    <button
+                        onClick={onPrevPage}
+                        className="flex items-center gap-1.5 text-sm text-gray-400 hover:text-gray-600 transition-colors cursor-pointer"
+                    >
+                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                            <line x1="19" y1="12" x2="5" y2="12" />
+                            <polyline points="12 19 5 12 12 5" />
+                        </svg>
+                        이전
+                    </button>
+                )}
+                {page < totalPages - 1 && (
+                    <button
+                        onClick={onNextPage}
+                        className="flex items-center gap-1.5 text-sm text-gray-400 hover:text-gray-600 transition-colors cursor-pointer"
+                    >
+                        다음
+                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                            <line x1="5" y1="12" x2="19" y2="12" />
+                            <polyline points="12 5 19 12 12 19" />
+                        </svg>
+                    </button>
+                )}
+            </div>
         </div>
     );
 }

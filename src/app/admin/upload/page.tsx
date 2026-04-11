@@ -164,7 +164,11 @@ function CoverImagePicker({
         ref={inputRef}
         type="file"
         accept="image/*"
-        onChange={(e) => onCoverImageSelect(e.target.files?.[0] ?? null)}
+        onChange={(e) => {
+          const f = e.target.files?.[0] ?? null;
+          console.log('[CoverImagePicker] onChange 파일:', f);
+          onCoverImageSelect(f);
+        }}
         className="hidden"
       />
       <p className="text-[11px] text-stone-400 mt-1">선택하지 않으면 기본 커버가 사용될 수 있습니다.</p>
@@ -182,7 +186,6 @@ export default function AdminUploadPage() {
   const [coverImage, setCoverImage] = useState<File | null>(null);
   const isFirstRender = useRef(true);
   const fileRef = useRef<File | null>(null);
-  const coverImageRef = useRef<File | null>(null);
 
   const isTxt = file?.name.endsWith('.txt') ?? false;
 
@@ -192,11 +195,12 @@ export default function AdminUploadPage() {
   }, []);
 
   const handleCoverImageSelect = useCallback((f: File | null) => {
-    coverImageRef.current = f;
+    console.log('[handleCoverImageSelect] 받은 파일:', f);
     setCoverImage(f);
   }, []);
 
   const handleUpload = useCallback(async (meta: UploadMetadata) => {
+    console.log('[handleUpload] 호출됨, coverImage state:', coverImage);
     const selectedFile = fileRef.current;
     if (!selectedFile) return alert('파일을 선택해주세요');
 
@@ -217,9 +221,11 @@ export default function AdminUploadPage() {
       if (meta.description) metadata.description = meta.description;
       formData.append('metadata', new Blob([JSON.stringify(metadata)], { type: 'application/json' }));
     }
-    if (coverImageRef.current) {
-      formData.append('coverImage', coverImageRef.current);
-      formData.append('cover', coverImageRef.current);
+    if (coverImage) {
+      console.log('[handleUpload] coverUrl FormData에 추가:', coverImage.name, coverImage.size, 'bytes');
+      formData.append('coverImage', coverImage);
+    } else {
+      console.warn('[handleUpload] coverImage가 null → FormData에 coverUrl 없음');
     }
 
     setLoading(true);
@@ -246,7 +252,7 @@ export default function AdminUploadPage() {
     } finally {
       setLoading(false);
     }
-  }, []);
+  }, [coverImage]);
 
   useEffect(() => {
     const left = (
