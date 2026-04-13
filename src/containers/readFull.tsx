@@ -124,7 +124,6 @@ export default function ReadFull() {
     };
 
     const handlePageChange = (page: number) => {
-        console.log('Page changed to:', page);
     };
 
     const handleSettingsClick = () => {

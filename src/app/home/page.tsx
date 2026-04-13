@@ -18,8 +18,7 @@ export default function HomePage() {
         try {
             setIsLoading(true);
             const data = await fetchBooks({ page: p, size: 8 });
-            console.log('[loadBooks] totalPages:', data.totalPages, 'currentPage:', data.currentPage, 'content length:', data.content.length);
-            setBooks(data.content);
+setBooks(data.content);
             setTotalPages(data.totalPages);
         } catch (err) {
             toast.error(err instanceof Error ? err.message : '책 목록을 불러오지 못했습니다.');
@@ -63,7 +62,7 @@ export default function HomePage() {
         } else {
             updateBookContent(left, right);
         }
-    }, [books, isLoading, page, totalPages, handlePrevPage, handleNextPage]);
+    }, [books, isLoading, page, totalPages]);
 
     return null;
 }

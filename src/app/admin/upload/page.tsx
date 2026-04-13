@@ -166,7 +166,6 @@ function CoverImagePicker({
         accept="image/*"
         onChange={(e) => {
           const f = e.target.files?.[0] ?? null;
-          console.log('[CoverImagePicker] onChange 파일:', f);
           onCoverImageSelect(f);
         }}
         className="hidden"
@@ -195,12 +194,10 @@ export default function AdminUploadPage() {
   }, []);
 
   const handleCoverImageSelect = useCallback((f: File | null) => {
-    console.log('[handleCoverImageSelect] 받은 파일:', f);
     setCoverImage(f);
   }, []);
 
   const handleUpload = useCallback(async (meta: UploadMetadata) => {
-    console.log('[handleUpload] 호출됨, coverImage state:', coverImage);
     const selectedFile = fileRef.current;
     if (!selectedFile) return alert('파일을 선택해주세요');
 
@@ -222,10 +219,7 @@ export default function AdminUploadPage() {
       formData.append('metadata', new Blob([JSON.stringify(metadata)], { type: 'application/json' }));
     }
     if (coverImage) {
-      console.log('[handleUpload] coverUrl FormData에 추가:', coverImage.name, coverImage.size, 'bytes');
       formData.append('coverImage', coverImage);
-    } else {
-      console.warn('[handleUpload] coverImage가 null → FormData에 coverUrl 없음');
     }
 
     setLoading(true);
