@@ -10,13 +10,16 @@ export default function HomePage() {
     const { setBookContent, updateBookContent } = useBook();
     const [books, setBooks] = useState<BookItem[]>([]);
     const [isLoading, setIsLoading] = useState(true);
+    const [page, setPage] = useState(0);
+    const [totalPages, setTotalPages] = useState(1);
     const isInitialMount = useRef(true);
 
-    const loadBooks = useCallback(async () => {
+    const loadBooks = useCallback(async (p: number) => {
         try {
             setIsLoading(true);
-            const data = await fetchBooks({ page: 0, size: 8 });
-            setBooks(data.content);
+            const data = await fetchBooks({ page: p, size: 8 });
+setBooks(data.content);
+            setTotalPages(data.totalPages);
         } catch (err) {
             toast.error(err instanceof Error ? err.message : '책 목록을 불러오지 못했습니다.');
         } finally {
@@ -25,8 +28,16 @@ export default function HomePage() {
     }, []);
 
     useEffect(() => {
-        loadBooks();
-    }, [loadBooks]);
+        loadBooks(page);
+    }, [loadBooks, page]);
+
+    const handlePrevPage = useCallback(() => {
+        setPage(p => p - 1);
+    }, []);
+
+    const handleNextPage = useCallback(() => {
+        setPage(p => p + 1);
+    }, []);
 
     useEffect(() => {
         const left = (
@@ -35,7 +46,15 @@ export default function HomePage() {
                 isLoading={isLoading}
             />
         );
-        const right = <RightHomeContent books={books.slice(4, 8)} />;
+        const right = (
+            <RightHomeContent
+                books={books.slice(4, 8)}
+                page={page}
+                totalPages={totalPages}
+                onPrevPage={handlePrevPage}
+                onNextPage={handleNextPage}
+            />
+        );
 
         if (isInitialMount.current) {
             setBookContent(left, right);
@@ -43,7 +62,7 @@ export default function HomePage() {
         } else {
             updateBookContent(left, right);
         }
-    }, [books, isLoading]);
+    }, [books, isLoading, page, totalPages]);
 
     return null;
 }

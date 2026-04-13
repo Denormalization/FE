@@ -84,10 +84,46 @@ export default function Read() {
     const currentBookInfoRef = useRef({ isbn: 1, chapterId: 1 });
     const recordedSentencesRef = useRef(new Set<string>());
 
+    const AI_BASE = '/api/ai';
+
     const suggestionTimeoutRef = useRef<any>(null);
     const [suggestion, setSuggestion] = useState<{ id: string; x: number; y: number; text: string } | null>(null);
     const setSuggestionRef = useRef(setSuggestion);
     useEffect(() => { setSuggestionRef.current = setSuggestion; }, [setSuggestion]);
+
+    const [paraphrasing, setParaphrasing] = useState(false);
+    const [paraphrasedResult, setParaphrasedResult] = useState<string | null>(null);
+
+    const handleParaphrase = useCallback(async () => {
+        if (!suggestion) return;
+
+        const parts = suggestion.id.split('-');
+        const prefix = parts[0];
+        const idx = parseInt(parts[2]);
+        const prevText = document.getElementById(`${prefix}-sentence-${idx - 1}`)?.textContent?.trim() ?? '';
+        const nextText = document.getElementById(`${prefix}-sentence-${idx + 1}`)?.textContent?.trim() ?? '';
+
+        setParaphrasing(true);
+        setParaphrasedResult(null);
+        try {
+            const res = await fetch(`${AI_BASE}/paraphrase`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    bookId: currentBookInfoRef.current.isbn,
+                    originalText: suggestion.text,
+                    context: { prevText, nextText },
+                }),
+            });
+            if (!res.ok) throw new Error('각색 요청 실패');
+            const data = await res.json() as { result: string };
+            setParaphrasedResult(data.result);
+        } catch {
+            setParaphrasedResult('각색 중 오류가 발생했습니다.');
+        } finally {
+            setParaphrasing(false);
+        }
+    }, [suggestion]);
 
     const pages = useMemo(() => {
         const textToSplit = readingText || POEM_TEXT;
@@ -277,30 +313,48 @@ export default function Read() {
                         <div className="w-full h-1 bg-gradient-to-r from-amber-400 to-orange-400" />
 
                         <div className="px-5 py-4 w-full">
-                            <h3 className="text-[15px] font-bold text-gray-800 mb-1 leading-snug font-bookmyungjo">
-                                각색하시겠습니까?
-                            </h3>
-                            <p className="text-[12px] text-gray-400 leading-relaxed mb-4 font-bookmyungjo">
-                                이 문장을 당신만의 시선으로<br />새롭게 그려보세요
-                            </p>
-
-                            <div className="flex gap-2">
-                                <button
-                                    onClick={() => {
-                                        alert("각색을 시작합니다.");
-                                        setSuggestion(null);
-                                    }}
-                                    className="flex-1 py-2 bg-gray-900 text-white rounded-xl text-[12px] font-bold hover:bg-gray-700 active:scale-95 transition-all"
-                                >
-                                    시작하기
-                                </button>
-                                <button
-                                    onClick={() => setSuggestion(null)}
-                                    className="py-2 px-3 bg-gray-100 text-gray-500 rounded-xl text-[12px] font-medium hover:bg-gray-200 active:scale-95 transition-all"
-                                >
-                                    닫기
-                                </button>
-                            </div>
+                            {paraphrasing ? (
+                                <div className="flex flex-col items-center py-4 gap-3">
+                                    <span className="inline-block w-6 h-6 border-2 border-amber-400/40 border-t-amber-400 rounded-full animate-spin" />
+                                    <p className="text-[12px] text-gray-400 font-bookmyungjo">각색 중...</p>
+                                </div>
+                            ) : paraphrasedResult ? (
+                                <>
+                                    <h3 className="text-[13px] font-bold text-gray-800 mb-2 leading-snug font-bookmyungjo">각색 결과</h3>
+                                    <p className="text-[12px] text-gray-600 leading-relaxed mb-4 font-bookmyungjo bg-amber-50/60 rounded-lg p-3 border border-amber-100">
+                                        {paraphrasedResult}
+                                    </p>
+                                    <button
+                                        onClick={() => { setSuggestion(null); setParaphrasedResult(null); }}
+                                        className="w-full py-2 bg-gray-100 text-gray-500 rounded-xl text-[12px] font-medium hover:bg-gray-200 active:scale-95 transition-all"
+                                    >
+                                        닫기
+                                    </button>
+                                </>
+                            ) : (
+                                <>
+                                    <h3 className="text-[15px] font-bold text-gray-800 mb-1 leading-snug font-bookmyungjo">
+                                        각색하시겠습니까?
+                                    </h3>
+                                    <p className="text-[12px] text-gray-400 leading-relaxed mb-4 font-bookmyungjo">
+                                        이 문장을 당신만의 시선으로<br />새롭게 그려보세요
+                                    </p>
+                                    <div className="flex gap-2">
+                                        <button
+                                            onClick={handleParaphrase}
+                                            className="flex-1 py-2 bg-gray-900 text-white rounded-xl text-[12px] font-bold hover:bg-gray-700 active:scale-95 transition-all"
+                                        >
+                                            시작하기
+                                        </button>
+                                        <button
+                                            onClick={() => { setSuggestion(null); setParaphrasedResult(null); }}
+                                            className="py-2 px-3 bg-gray-100 text-gray-500 rounded-xl text-[12px] font-medium hover:bg-gray-200 active:scale-95 transition-all"
+                                        >
+                                            닫기
+                                        </button>
+                                    </div>
+                                </>
+                            )}
                         </div>
                     </div>
                     <style>{`
