@@ -16,36 +16,36 @@ interface ReadFullContentProps {
     viewerSettings?: ContentViewerSettings;
 }
 
-const FONT_SIZE_MAP: Record<number, string> = {
-    1: 'text-lg',
-    2: 'text-xl',
-    3: 'text-2xl',
-    4: 'text-3xl',
-    5: 'text-4xl',
-    6: 'text-5xl',
-    7: 'text-6xl',
-    8: 'text-7xl',
-    9: 'text-8xl',
-    10: 'text-9xl',
+export const READ_FULL_FONT_SIZE_PX_MAP: Record<number, number> = {
+    1: 18,
+    2: 20,
+    3: 24,
+    4: 30,
+    5: 36,
+    6: 48,
+    7: 60,
+    8: 72,
+    9: 96,
+    10: 128,
 };
 
-const LINE_HEIGHT_MAP: Record<number, string> = {
-    1: 'leading-[1.6]',
-    2: 'leading-[2]',
-    3: 'leading-[2.4]',
-    4: 'leading-[2.8]',
-    5: 'leading-[3.2]',
+export const READ_FULL_LINE_HEIGHT_MAP: Record<number, number> = {
+    1: 1.6,
+    2: 2,
+    3: 2.4,
+    4: 2.8,
+    5: 3.2,
 };
 
-const PADDING_MAP: Record<number, string> = {
-    1: 'px-24 py-8',
-    2: 'px-32 py-10',
-    3: 'px-40 py-12',
-    4: 'px-48 py-14',
-    5: 'px-56 py-16',
+export const READ_FULL_PADDING_PX_MAP: Record<number, { x: number; y: number }> = {
+    1: { x: 96, y: 32 },
+    2: { x: 128, y: 40 },
+    3: { x: 160, y: 48 },
+    4: { x: 192, y: 56 },
+    5: { x: 224, y: 64 },
 };
 
-const FONT_FAMILY_MAP: Record<string, { className: string; style: React.CSSProperties }> = {
+export const READ_FULL_FONT_FAMILY_MAP: Record<string, { className: string; style: React.CSSProperties }> = {
     pretendard: {
         className: 'font-pretendard',
         style: { fontFamily: 'system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", "Noto Sans KR", "Malgun Gothic", sans-serif' }
@@ -61,26 +61,43 @@ const FONT_FAMILY_MAP: Record<string, { className: string; style: React.CSSPrope
 };
 
 export default function ReadFullContent({ leftContent, rightContent, viewerSettings }: ReadFullContentProps) {
-    const fontSize = FONT_SIZE_MAP[viewerSettings?.fontSize ?? 4] ?? 'text-lg';
-    const lineHeight = LINE_HEIGHT_MAP[viewerSettings?.lineHeight ?? 2] ?? 'leading-[2]';
-    const padding = PADDING_MAP[viewerSettings?.padding ?? 1] ?? 'px-24 py-8';
+    const fontSizePx = READ_FULL_FONT_SIZE_PX_MAP[viewerSettings?.fontSize ?? 4] ?? 30;
+    const lineHeight = READ_FULL_LINE_HEIGHT_MAP[viewerSettings?.lineHeight ?? 2] ?? 2;
+    const padding = READ_FULL_PADDING_PX_MAP[viewerSettings?.padding ?? 1] ?? { x: 96, y: 32 };
 
     const themeData = VIEWER_THEMES.find((t) => t.id === (viewerSettings?.theme ?? 'white'));
     const textColor = themeData?.text ?? 'text-gray-700';
-    const fontFamily = FONT_FAMILY_MAP[viewerSettings?.font ?? 'pretendard'] ?? FONT_FAMILY_MAP.pretendard;
+    const fontFamily = READ_FULL_FONT_FAMILY_MAP[viewerSettings?.font ?? 'pretendard'] ?? READ_FULL_FONT_FAMILY_MAP.pretendard;
 
     return (
-        <div className={`flex-1 overflow-hidden ${padding} min-h-0`}>
+        <div
+            className="flex-1 overflow-hidden min-h-0"
+            style={{ padding: `${padding.y}px ${padding.x}px` }}
+        >
             <div className="grid grid-cols-2 gap-24 h-full">
                 <div
-                    className={`${textColor} ${fontSize} ${lineHeight} ${fontFamily.className} text-justify break-keep h-full overflow-hidden`}
-                    style={fontFamily.style}
+                    className={`${textColor} ${fontFamily.className} text-justify break-all h-full overflow-hidden`}
+                    style={{
+                        ...fontFamily.style,
+                        fontSize: `${fontSizePx}px`,
+                        lineHeight,
+                        textJustify: 'inter-character',
+                        wordBreak: 'break-all',
+                        overflowWrap: 'anywhere',
+                    }}
                 >
                     {leftContent}
                 </div>
                 <div
-                    className={`${textColor} ${fontSize} ${lineHeight} ${fontFamily.className} text-justify break-keep h-full overflow-hidden`}
-                    style={fontFamily.style}
+                    className={`${textColor} ${fontFamily.className} text-justify break-all h-full overflow-hidden`}
+                    style={{
+                        ...fontFamily.style,
+                        fontSize: `${fontSizePx}px`,
+                        lineHeight,
+                        textJustify: 'inter-character',
+                        wordBreak: 'break-all',
+                        overflowWrap: 'anywhere',
+                    }}
                 >
                     {rightContent}
                 </div>

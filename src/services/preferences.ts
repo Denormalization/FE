@@ -1,4 +1,4 @@
-import { getAccessToken } from '@/lib/auth';
+import { fetchWithAuthRetry } from '@/lib/auth';
 
 const API_BASE =
   typeof window !== 'undefined'
@@ -21,16 +21,11 @@ export interface UpdateUserPreferencesRequest {
 }
 
 export async function fetchUserPreferences(): Promise<UserPreferencesResponse> {
-  const token = getAccessToken();
-  if (!token) {
-    throw new Error('로그인이 필요합니다.');
-  }
-
-  const res = await fetch(`${API_BASE}/api/v1/users/me/preferences`, {
-    headers: {
-      Authorization: `Bearer ${token}`,
-    },
-  });
+  const res = await fetchWithAuthRetry(
+    `${API_BASE}/api/v1/users/me/preferences`,
+    {},
+    { auth: 'required' }
+  );
 
   if (!res.ok) {
     const text = await res.text();
@@ -43,19 +38,17 @@ export async function fetchUserPreferences(): Promise<UserPreferencesResponse> {
 export async function updateUserPreferences(
   body: UpdateUserPreferencesRequest
 ): Promise<UserPreferencesResponse> {
-  const token = getAccessToken();
-  if (!token) {
-    throw new Error('로그인이 필요합니다.');
-  }
-
-  const res = await fetch(`${API_BASE}/api/v1/users/me/preferences`, {
-    method: 'PATCH',
-    headers: {
-      'Content-Type': 'application/json',
-      Authorization: `Bearer ${token}`,
+  const res = await fetchWithAuthRetry(
+    `${API_BASE}/api/v1/users/me/preferences`,
+    {
+      method: 'PATCH',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify(body),
     },
-    body: JSON.stringify(body),
-  });
+    { auth: 'required' }
+  );
 
   if (!res.ok) {
     const text = await res.text();

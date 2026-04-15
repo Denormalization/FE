@@ -175,17 +175,83 @@ function getRefreshToken(): string | null {
   return window.localStorage.getItem(STORAGE_REFRESH);
 }
 
+type AuthMode = 'none' | 'optional' | 'required';
+type FetchWithAuthOptions = {
+  auth?: AuthMode;
+  retryOn401?: boolean;
+};
+
+let refreshInFlight: Promise<void> | null = null;
+
+async function refreshOnce(): Promise<void> {
+  if (!refreshInFlight) {
+    refreshInFlight = refresh()
+      .then(() => undefined)
+      .finally(() => {
+        refreshInFlight = null;
+      });
+  }
+  await refreshInFlight;
+}
+
 export function setTokens(accessToken: string, refreshToken: string): void {
   if (typeof window === 'undefined') return;
   window.localStorage.setItem(STORAGE_ACCESS, accessToken);
   window.localStorage.setItem(STORAGE_REFRESH, refreshToken);
 }
 
+export async function fetchWithAuthRetry(
+  input: RequestInfo | URL,
+  init: RequestInit = {},
+  options: FetchWithAuthOptions = {}
+): Promise<Response> {
+  const authMode = options.auth ?? 'optional';
+  const retryOn401 = options.retryOn401 ?? true;
+
+  const buildInit = (): RequestInit => {
+    const headers = new Headers(init.headers);
+    if (authMode !== 'none') {
+      const token = getAccessToken();
+      if (token) {
+        headers.set('Authorization', `Bearer ${token}`);
+      } else if (authMode === 'required') {
+        throw new Error('로그인이 필요합니다.');
+      } else {
+        headers.delete('Authorization');
+      }
+    }
+    return { ...init, headers };
+  };
+
+  const firstInit = buildInit();
+  const firstHadAuthorization = new Headers(firstInit.headers).has('Authorization');
+  let res = await fetch(input, firstInit);
+
+  if (!retryOn401 || authMode === 'none' || res.status !== 401) {
+    return res;
+  }
+
+  if (typeof window === 'undefined' || !firstHadAuthorization) {
+    return res;
+  }
+
+  try {
+    await refreshOnce();
+  } catch {
+    return res;
+  }
+
+  const retryInit = buildInit();
+  res = await fetch(input, retryInit);
+  return res;
+}
+
 /** 토큰 갱신 (POST /api/v1/auth/refresh, Cookie에 refreshToken) */
 export async function refresh(): Promise<RefreshResponse> {
   const token = getRefreshToken();
   if (!token) {
-    throw new Error('리프레시 토큰이 없습니다.');
+    clearTokens();
+    throw new Error('세션이 만료되었습니다. 다시 로그인해 주세요.');
   }
 
   const res = await fetch('/api/auth', {
@@ -196,7 +262,8 @@ export async function refresh(): Promise<RefreshResponse> {
 
   if (!res.ok) {
     const text = await res.text();
-    throw new Error(text || `토큰 갱신 실패 (${res.status})`);
+    clearTokens();
+    throw new Error(text || `세션이 만료되었습니다. 다시 로그인해 주세요. (${res.status})`);
   }
 
   const data = (await res.json()) as RefreshResponse;
@@ -216,18 +283,14 @@ export function clearTokens(): void {
 }
 
 export async function getMe(): Promise<User> {
-  const accessToken = getAccessToken();
-  if (!accessToken) {
-    throw new Error('로그인 정보가 없습니다.');
-  }
-
   const url = `${API_URL}/api/v1/users/me`;
-  const res = await fetch(url, {
-    method: 'GET',
-    headers: {
-      'Authorization': `Bearer ${accessToken}`,
+  const res = await fetchWithAuthRetry(
+    url,
+    {
+      method: 'GET',
     },
-  });
+    { auth: 'required' }
+  );
 
   if (!res.ok) {
     const text = await res.text();
