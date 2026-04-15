@@ -91,6 +91,20 @@ body::after {
     animation: real-flip 0.6s cubic-bezier(0.645, 0.045, 0.355, 1) forwards;
 }
 
+@keyframes real-flip-backward {
+    0% {
+        transform: rotateY(0deg);
+    }
+
+    100% {
+        transform: rotateY(180deg);
+    }
+}
+
+.animate-real-flip-backward {
+    animation: real-flip-backward 0.6s cubic-bezier(0.645, 0.045, 0.355, 1) forwards;
+}
+
 @keyframes fade-in-out {
 
     0%,

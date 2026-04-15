@@ -77,6 +77,7 @@ export default function Read() {
     const { setBookContent, setActiveGazeId, readingText, setReadingText, setOverlayContent } = useBook();
     const [currentPage, setCurrentPage] = useState(0);
     const [loaded, setLoaded] = useState(false);
+    const prevPageRef = useRef(0);
     const stickyIdRef = useRef<string | null>(null);
     const stickyTimeoutRef = useRef<any>(null);
     const gazeStartTimeRef = useRef<number | null>(null);
@@ -142,11 +143,14 @@ export default function Read() {
     useEffect(() => {
         const leftPage = pages[currentPage] || '';
         const rightPage = pages[currentPage + 1] || '';
+        const direction = currentPage < prevPageRef.current ? 'backward' : 'forward';
 
         setBookContent(
             <PageContent text={leftPage} idPrefix="left" />,
-            <PageContent text={rightPage} delay={1200} idPrefix="right" />
+            <PageContent text={rightPage} delay={1200} idPrefix="right" />,
+            direction
         );
+        prevPageRef.current = currentPage;
     }, [setBookContent, currentPage, pages]);
 
     const resetGazeTrackingState = useCallback(() => {
