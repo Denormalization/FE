@@ -3,6 +3,7 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
 import { getAccessToken } from '@/lib/auth';
 import { useBook } from '@/context/bookContext';
+import { indexBook } from '@/services/embedding';
 
 const API_BASE =
   typeof window !== 'undefined'
@@ -235,7 +236,14 @@ export default function AdminUploadPage() {
       setResultOk(res.ok);
       if (res.ok) {
         const data = (await res.json()) as UploadResponse;
-        setResult(`✅ 업로드 성공 (${res.status})\n\n${JSON.stringify(data, null, 2)}`);
+        setResult(`✅ 업로드 성공 (${res.status})\n\n${JSON.stringify(data, null, 2)}\n\n⏳ AI 임베딩 중...`);
+
+        try {
+          const embedResult = await indexBook(selectedFile, data.isbn, data.title);
+          setResult(`✅ 업로드 성공 (${res.status})\n\n${JSON.stringify(data, null, 2)}\n\n✅ AI 임베딩 완료 — ${embedResult.chunks_indexed}개 청크 저장됨`);
+        } catch (embedErr) {
+          setResult(`✅ 업로드 성공 (${res.status})\n\n${JSON.stringify(data, null, 2)}\n\n⚠️ AI 임베딩 실패\n${embedErr instanceof Error ? embedErr.message : String(embedErr)}`);
+        }
       } else {
         const text = await res.text();
         setResult(`❌ 실패 (${res.status})\n\n${text}`);

@@ -1,5 +1,6 @@
 import { getAccessToken } from '@/lib/auth';
-import type { GraphData } from '@/types/graph';
+import type { GraphData, GraphNode } from '@/types/graph';
+import { getInsertPosition } from '@/services/embedding';
 
 const API_BASE =
   typeof window !== 'undefined'
@@ -9,9 +10,34 @@ const API_BASE =
 const SUB_COLORS = ['#38844E', '#409659', '#4E7A5D', '#6B9078', '#2D5A3C', '#558B6E', '#437356'];
 const randomColor = () => SUB_COLORS[Math.floor(Math.random() * SUB_COLORS.length)];
 
-export async function addKeyword(term: string, contextSentence: string): Promise<void> {
+export async function addKeyword(
+  term: string,
+  contextSentence: string,
+  candidateNodes?: GraphNode[]
+): Promise<void> {
   const token = getAccessToken();
   if (!token) throw new Error('로그인이 필요합니다.');
+
+  let parentId: string | null = null;
+  let insertType: 'child' | 'sibling' | null = null;
+
+  if (candidateNodes && candidateNodes.length > 0) {
+    const position = await getInsertPosition(
+      term,
+      contextSentence,
+      candidateNodes.map(n => ({
+        id: n.id,
+        term: n.label,
+        context_sentence: n.description,
+      }))
+    );
+    parentId = position.parent_id;
+    insertType = position.insert_type;
+  }
+
+  const body: Record<string, unknown> = { term, contextSentence };
+  if (parentId) body.parentId = parentId;
+  if (insertType) body.insertType = insertType;
 
   const res = await fetch(`${API_BASE}/api/v1/library`, {
     method: 'POST',
@@ -19,7 +45,7 @@ export async function addKeyword(term: string, contextSentence: string): Promise
       'Content-Type': 'application/json',
       Authorization: `Bearer ${token}`,
     },
-    body: JSON.stringify({ term, contextSentence }),
+    body: JSON.stringify(body),
   });
 
   if (res.status === 409) {
