@@ -55,6 +55,7 @@ export default function ReadFull() {
     const { readingText, readingTitle } = useBook();
     const content = readingText || POEM_TEXT;
     const title = readingTitle || READ_FULL_CONSTANTS.TITLE;
+    const [currentPage, setCurrentPage] = useState(0);
     const [showSettings, setShowSettings] = useState(false);
     const [showBars, setShowBars] = useState(true);
     const [viewerSettings, setViewerSettings] = useState<ViewerSettings>({
@@ -103,6 +104,22 @@ export default function ReadFull() {
         };
     }, []);
 
+    const pages = (() => {
+        const sentences = (content.match(/[^.!?\n]+[.!?]?\n*\s*/g) || [])
+            .map((s) => s.trim())
+            .filter(Boolean);
+        if (sentences.length === 0) {
+            return [''];
+        }
+
+        const chunkSize = 8;
+        const result: string[] = [];
+        for (let i = 0; i < sentences.length; i += chunkSize) {
+            result.push(sentences.slice(i, i + chunkSize).join(' '));
+        }
+        return result;
+    })();
+
     const handleViewerSettingsChange = (nextSettings: ViewerSettings) => {
         setViewerSettings(nextSettings);
 
@@ -124,6 +141,16 @@ export default function ReadFull() {
     };
 
     const handlePageChange = (page: number) => {
+        const nextIndex = clamp(page - 1, 0, Math.max(0, pages.length - 1));
+        setCurrentPage(nextIndex);
+    };
+
+    const handlePrevPage = () => {
+        setCurrentPage((prev) => Math.max(0, prev - 2));
+    };
+
+    const handleNextPage = () => {
+        setCurrentPage((prev) => Math.min(Math.max(0, pages.length - 1), prev + 2));
     };
 
     const handleSettingsClick = () => {
@@ -144,6 +171,13 @@ export default function ReadFull() {
 
     const themeData = VIEWER_THEMES.find((t) => t.id === viewerSettings.theme);
     const themeBg = themeData?.bg ?? 'bg-white';
+    const maxPageIndex = Math.max(0, pages.length - 1);
+    const safeCurrentPage = Math.min(currentPage, maxPageIndex);
+    const leftPageContent = pages[safeCurrentPage] ?? '';
+    const rightPageContent = pages[safeCurrentPage + 1] ?? '';
+    const canGoPrev = safeCurrentPage > 0;
+    const canGoNext = safeCurrentPage + 2 < pages.length;
+    const arrowButtonStyle = "flex h-14 w-14 items-center justify-center rounded-full bg-white/80 text-[#2f2f2f] text-3xl font-semibold shadow-[0_4px_16px_rgba(0,0,0,0.2)] transition-all duration-200 hover:scale-105 hover:bg-white disabled:opacity-35 disabled:cursor-not-allowed";
 
     return (
         <div
@@ -151,10 +185,33 @@ export default function ReadFull() {
             onDoubleClick={handleDoubleClick}
         >
             <ReadFullHeader title={title} showBars={showBars} theme={viewerSettings.theme} />
-            <ReadFullContent content={content} viewerSettings={viewerSettings} />
+            <div className="relative flex-1 min-h-0">
+                <button
+                    onClick={handlePrevPage}
+                    disabled={!canGoPrev}
+                    className={`absolute left-3 top-1/2 -translate-y-1/2 z-20 ${arrowButtonStyle}`}
+                    aria-label="이전 페이지"
+                >
+                    &#8592;
+                </button>
+                <button
+                    onClick={handleNextPage}
+                    disabled={!canGoNext}
+                    className={`absolute right-3 top-1/2 -translate-y-1/2 z-20 ${arrowButtonStyle}`}
+                    aria-label="다음 페이지"
+                >
+                    &#8594;
+                </button>
+
+                <ReadFullContent
+                    leftContent={leftPageContent}
+                    rightContent={rightPageContent}
+                    viewerSettings={viewerSettings}
+                />
+            </div>
             <ReadFullFooter
-                currentPage={READ_FULL_CONSTANTS.CURRENT_PAGE}
-                totalPages={READ_FULL_CONSTANTS.TOTAL_PAGES}
+                currentPage={safeCurrentPage + 1}
+                totalPages={pages.length}
                 onPageChange={handlePageChange}
                 onSettingsClick={handleSettingsClick}
                 onFullscreenClick={handleFullscreenClick}

@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { IoSettingsOutline } from 'react-icons/io5';
 import { BiExpand } from 'react-icons/bi';
 import { VIEWER_THEMES } from '@/constants/viewerSettings';
@@ -26,13 +26,18 @@ export default function ReadFullFooter({
 }: ReadFullFooterProps) {
     const [sliderValue, setSliderValue] = useState(currentPage);
 
+    useEffect(() => {
+        setSliderValue(currentPage);
+    }, [currentPage]);
+
     const handleSliderChange = (e: React.ChangeEvent<HTMLInputElement>) => {
         const value = Number(e.target.value);
         setSliderValue(value);
         onPageChange?.(value);
     };
 
-    const progress = (sliderValue / totalPages) * 100;
+    const safeTotalPages = Math.max(1, totalPages);
+    const progress = (sliderValue / safeTotalPages) * 100;
 
     const themeData = VIEWER_THEMES.find((t) => t.id === (theme ?? 'white'));
     const textColor = themeData?.text ?? 'text-gray-500';
@@ -64,7 +69,7 @@ export default function ReadFullFooter({
                 <input
                     type="range"
                     min={1}
-                    max={totalPages}
+                    max={safeTotalPages}
                     value={sliderValue}
                     onChange={handleSliderChange}
                     className="absolute inset-0 w-full h-full opacity-0 cursor-pointer"
@@ -73,7 +78,7 @@ export default function ReadFullFooter({
 
 
             <div className={`${textColor} text-sm min-w-[80px]`}>
-                {sliderValue}/{totalPages}
+                {sliderValue}/{safeTotalPages}
             </div>
 
 

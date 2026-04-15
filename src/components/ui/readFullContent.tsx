@@ -11,7 +11,8 @@ export interface ContentViewerSettings {
 }
 
 interface ReadFullContentProps {
-    content: string;
+    leftContent: string;
+    rightContent: string;
     viewerSettings?: ContentViewerSettings;
 }
 
@@ -59,7 +60,7 @@ const FONT_FAMILY_MAP: Record<string, { className: string; style: React.CSSPrope
     },
 };
 
-export default function ReadFullContent({ content, viewerSettings }: ReadFullContentProps) {
+export default function ReadFullContent({ leftContent, rightContent, viewerSettings }: ReadFullContentProps) {
     const fontSize = FONT_SIZE_MAP[viewerSettings?.fontSize ?? 4] ?? 'text-lg';
     const lineHeight = LINE_HEIGHT_MAP[viewerSettings?.lineHeight ?? 2] ?? 'leading-[2]';
     const padding = PADDING_MAP[viewerSettings?.padding ?? 1] ?? 'px-24 py-8';
@@ -69,19 +70,19 @@ export default function ReadFullContent({ content, viewerSettings }: ReadFullCon
     const fontFamily = FONT_FAMILY_MAP[viewerSettings?.font ?? 'pretendard'] ?? FONT_FAMILY_MAP.pretendard;
 
     return (
-        <div className={`flex-1 overflow-y-auto ${padding} min-h-0`}>
+        <div className={`flex-1 overflow-hidden ${padding} min-h-0`}>
             <div className="grid grid-cols-2 gap-24 h-full">
-                <div 
-                    className={`${textColor} ${fontSize} ${lineHeight} ${fontFamily.className} text-justify break-keep`}
+                <div
+                    className={`${textColor} ${fontSize} ${lineHeight} ${fontFamily.className} text-justify break-keep h-full overflow-hidden`}
                     style={fontFamily.style}
                 >
-                    {content}
+                    {leftContent}
                 </div>
-                <div 
-                    className={`${textColor} ${fontSize} ${lineHeight} ${fontFamily.className} text-justify break-keep`}
+                <div
+                    className={`${textColor} ${fontSize} ${lineHeight} ${fontFamily.className} text-justify break-keep h-full overflow-hidden`}
                     style={fontFamily.style}
                 >
-                    {content}
+                    {rightContent}
                 </div>
             </div>
         </div>
