@@ -148,7 +148,8 @@ export default function Read() {
         setBookContent(
             <PageContent text={leftPage} idPrefix="left" />,
             <PageContent text={rightPage} delay={1200} idPrefix="right" />,
-            direction
+            direction,
+            { preserveOverlay: true }
         );
         prevPageRef.current = currentPage;
     }, [setBookContent, currentPage, pages]);
@@ -183,7 +184,6 @@ export default function Read() {
 
     const handleGazeUpdate = useCallback((id: string | null) => {
         const now = Date.now();
-        const bookInfo = currentBookInfoRef.current;
 
         if (stickyIdRef.current && stickyIdRef.current !== id) {
             if (suggestionTimeoutRef.current) {

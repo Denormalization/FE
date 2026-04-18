@@ -49,6 +49,7 @@ export function Book() {
         <div className="flex items-center justify-center">
             <div className="relative">
                 <div
+                    data-book-root="true"
                     className="
                         relative z-10 flex
                         w-[80rem] h-[50rem]

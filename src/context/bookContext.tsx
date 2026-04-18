@@ -14,7 +14,12 @@ interface BookContextType {
     flipDirection: 'forward' | 'backward';
     readingText: string;
     readingTitle: string;
-    setBookContent: (left: ReactNode, right: ReactNode, direction?: 'forward' | 'backward') => void;
+    setBookContent: (
+        left: ReactNode,
+        right: ReactNode,
+        direction?: 'forward' | 'backward',
+        options?: { preserveOverlay?: boolean }
+    ) => void;
     updateBookContent: (left: ReactNode, right: ReactNode) => void;
     setOverlayContent: (overlay: ReactNode) => void;
     activeGazeId: string | null;
@@ -54,11 +59,18 @@ export function BookProvider({ children }: { children: ReactNode }) {
         setFlipKey(prev => prev + 1);
     }, []);
 
-    const setBookContent = useCallback((left: ReactNode, right: ReactNode, direction: 'forward' | 'backward' = 'forward') => {
+    const setBookContent = useCallback((
+        left: ReactNode,
+        right: ReactNode,
+        direction: 'forward' | 'backward' = 'forward',
+        options?: { preserveOverlay?: boolean }
+    ) => {
         setPrevContent(contentRef.current);
         setContent({ leftContent: left, rightContent: right });
         setFlipDirection(direction);
-        setOverlayContent(null);
+        if (!options?.preserveOverlay) {
+            setOverlayContent(null);
+        }
         setFlipKey(prev => prev + 1);
     }, []);
 
