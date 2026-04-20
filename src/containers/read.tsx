@@ -87,6 +87,8 @@ export default function Read() {
     const AI_BASE = '/api/ai';
 
     const suggestionTimeoutRef = useRef<any>(null);
+    const suggestionDismissTimerRef = useRef<any>(null);
+    const suggestionLockRef = useRef(false);
     const [suggestion, setSuggestion] = useState<{ id: string; x: number; y: number; text: string } | null>(null);
     const setSuggestionRef = useRef(setSuggestion);
     useEffect(() => { setSuggestionRef.current = setSuggestion; }, [setSuggestion]);
@@ -103,6 +105,11 @@ export default function Read() {
         const prevText = document.getElementById(`${prefix}-sentence-${idx - 1}`)?.textContent?.trim() ?? '';
         const nextText = document.getElementById(`${prefix}-sentence-${idx + 1}`)?.textContent?.trim() ?? '';
 
+        suggestionLockRef.current = true;
+        if (suggestionDismissTimerRef.current) {
+            clearTimeout(suggestionDismissTimerRef.current);
+            suggestionDismissTimerRef.current = null;
+        }
         setParaphrasing(true);
         setParaphrasedResult(null);
         try {
@@ -163,6 +170,11 @@ export default function Read() {
             clearTimeout(stickyTimeoutRef.current);
             stickyTimeoutRef.current = null;
         }
+        if (suggestionDismissTimerRef.current) {
+            clearTimeout(suggestionDismissTimerRef.current);
+            suggestionDismissTimerRef.current = null;
+        }
+        suggestionLockRef.current = false;
         setActiveGazeId(null);
         stickyIdRef.current = null;
         gazeStartTimeRef.current = null;
@@ -208,36 +220,49 @@ export default function Read() {
                 gazeStartTimeRef.current = now;
                 stickyIdRef.current = id;
                 setActiveGazeId(id);
-                setSuggestionRef.current(null);
 
-                suggestionTimeoutRef.current = setTimeout(() => {
-                    const el = document.getElementById(id);
-                    if (el) {
-                        const rect = el.getBoundingClientRect();
-                        const text = el.textContent?.trim() || "";
-                        setSuggestionRef.current({
-                            id: id,
-                            x: rect.right,
-                            y: rect.top,
-                            text: text
-                        });
-                        if (text) {
-                            const bInfo = currentBookInfoRef.current;
-                            const eventKey = `${bInfo.isbn}-${bInfo.chapterId}-${text}`;
-                            if (!recordedSentencesRef.current.has(eventKey)) {
-                                recordGazeEvent({
-                                    bookId: bInfo.isbn,
-                                    chapterId: bInfo.chapterId,
-                                    text: text,
-                                    dwellTime: Date.now() - (gazeStartTimeRef.current ?? Date.now()),
-                                    timestamp: new Date().toISOString()
-                                }).then(() => {
-                                    recordedSentencesRef.current.add(eventKey);
-                                }).catch(() => { });
+                // 모달이 이미 활성화 상태(10초 타이머 진행 중 or 잠금)면 새 suggestion 타이머 시작하지 않음
+                const suggestionActive = suggestionDismissTimerRef.current !== null || suggestionLockRef.current;
+                if (!suggestionActive) {
+                    setSuggestionRef.current(null);
+
+                    suggestionTimeoutRef.current = setTimeout(() => {
+                        const el = document.getElementById(id);
+                        if (el) {
+                            const rect = el.getBoundingClientRect();
+                            const text = el.textContent?.trim() || "";
+                            setSuggestionRef.current({
+                                id: id,
+                                x: rect.right,
+                                y: rect.top,
+                                text: text
+                            });
+                            // 모달 등장 후 10초 자동 닫기 타이머 시작
+                            if (suggestionDismissTimerRef.current) clearTimeout(suggestionDismissTimerRef.current);
+                            suggestionDismissTimerRef.current = setTimeout(() => {
+                                suggestionDismissTimerRef.current = null;
+                                if (!suggestionLockRef.current) {
+                                    setSuggestionRef.current(null);
+                                }
+                            }, 10000);
+                            if (text) {
+                                const bInfo = currentBookInfoRef.current;
+                                const eventKey = `${bInfo.isbn}-${bInfo.chapterId}-${text}`;
+                                if (!recordedSentencesRef.current.has(eventKey)) {
+                                    recordGazeEvent({
+                                        bookId: bInfo.isbn,
+                                        chapterId: bInfo.chapterId,
+                                        text: text,
+                                        dwellTime: Date.now() - (gazeStartTimeRef.current ?? Date.now()),
+                                        timestamp: new Date().toISOString()
+                                    }).then(() => {
+                                        recordedSentencesRef.current.add(eventKey);
+                                    }).catch(() => { });
+                                }
                             }
                         }
-                    }
-                }, 4000);
+                    }, 4000);
+                }
             }
             // 같은 문장에 계속 머무르는 경우: 타이머 유지 (건드리지 않음)
         } else {
@@ -365,7 +390,15 @@ export default function Read() {
                                         {paraphrasedResult}
                                     </p>
                                     <button
-                                        onClick={() => { setSuggestion(null); setParaphrasedResult(null); }}
+                                        onClick={() => {
+                                            suggestionLockRef.current = false;
+                                            if (suggestionDismissTimerRef.current) {
+                                                clearTimeout(suggestionDismissTimerRef.current);
+                                                suggestionDismissTimerRef.current = null;
+                                            }
+                                            setSuggestion(null);
+                                            setParaphrasedResult(null);
+                                        }}
                                         className="w-full py-2 bg-gray-100 text-gray-500 rounded-xl text-[12px] font-medium hover:bg-gray-200 active:scale-95 transition-all"
                                     >
                                         닫기
@@ -387,7 +420,15 @@ export default function Read() {
                                             시작하기
                                         </button>
                                         <button
-                                            onClick={() => { setSuggestion(null); setParaphrasedResult(null); }}
+                                            onClick={() => {
+                                                suggestionLockRef.current = false;
+                                                if (suggestionDismissTimerRef.current) {
+                                                    clearTimeout(suggestionDismissTimerRef.current);
+                                                    suggestionDismissTimerRef.current = null;
+                                                }
+                                                setSuggestion(null);
+                                                setParaphrasedResult(null);
+                                            }}
                                             className="py-2 px-3 bg-gray-100 text-gray-500 rounded-xl text-[12px] font-medium hover:bg-gray-200 active:scale-95 transition-all"
                                         >
                                             닫기

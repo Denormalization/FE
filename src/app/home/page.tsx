@@ -49,6 +49,7 @@ setBooks(data.content);
         const right = (
             <RightHomeContent
                 books={books.slice(4, 8)}
+                isLoading={isLoading}
                 page={page}
                 totalPages={totalPages}
                 onPrevPage={handlePrevPage}

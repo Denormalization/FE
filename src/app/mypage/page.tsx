@@ -5,13 +5,22 @@ import { useRouter } from 'next/navigation';
 import { toast } from 'react-toastify';
 import { useBook } from '@/context/bookContext';
 import { LeftHomeContent, RightHomeContent } from '@/containers/mypage';
-import { BOOKS } from '@/mock/home';
+import { fetchReadingBooks, ReadingBook } from '@/services/books';
 import { logout } from '@/lib/auth';
 
 export default function MyPagePage() {
     const { setBookContent } = useBook();
     const router = useRouter();
     const [searchTerm, setSearchTerm] = useState('');
+    const [books, setBooks] = useState<ReadingBook[]>([]);
+    const [loading, setLoading] = useState(true);
+
+    useEffect(() => {
+        fetchReadingBooks()
+            .then(setBooks)
+            .catch((err) => toast.error(err instanceof Error ? err.message : '읽고 있는 책 조회 실패'))
+            .finally(() => setLoading(false));
+    }, []);
 
     const handleLogout = useCallback(async () => {
         try {
@@ -23,13 +32,12 @@ export default function MyPagePage() {
         }
     }, [router]);
 
-    const filteredBooks = BOOKS.filter(book =>
-        book.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        book.author.toLowerCase().includes(searchTerm.toLowerCase())
+    const filtered = books.filter(book =>
+        book.bookTitle.toLowerCase().includes(searchTerm.toLowerCase())
     );
 
-    const leftBooks = filteredBooks.slice(0, 4);
-    const rightBooks = filteredBooks.slice(4, 8);
+    const leftBooks = filtered.slice(0, 4);
+    const rightBooks = filtered.slice(4, 8);
 
     useEffect(() => {
         setBookContent(
@@ -37,11 +45,11 @@ export default function MyPagePage() {
                 searchTerm={searchTerm}
                 onSearchChange={setSearchTerm}
                 books={leftBooks}
+                loading={loading}
             />,
             <RightHomeContent books={rightBooks} onLogout={handleLogout} />
         );
-    }, [searchTerm, handleLogout]);
+    }, [searchTerm, books, loading, handleLogout]);
 
     return null;
 }
-

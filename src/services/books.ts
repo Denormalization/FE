@@ -82,6 +82,29 @@ export async function fetchBookDetail(isbn: string): Promise<BookDetail> {
   return (await res.json()) as BookDetail;
 }
 
+export interface ReadingBook {
+  bookIsbn: number;
+  bookTitle: string;
+  coverUrl: string;
+  chapterId: number;
+  chapterTitle: string;
+  progressPercent: number;
+  lastReadAt: string;
+}
+
+export async function fetchReadingBooks(): Promise<ReadingBook[]> {
+  const url = `${API_BASE}/api/v1/reading`;
+  const res = await fetchWithAuthRetry(url, {}, { auth: 'required' });
+
+  if (!res.ok) {
+    const text = await res.text();
+    throw new Error(text || `읽고 있는 책 조회 실패 (${res.status})`);
+  }
+
+  const data = (await res.json()) as { readings: ReadingBook[] };
+  return data.readings;
+}
+
 export async function fetchChapterContent(
   isbn: string,
   chapterId: string

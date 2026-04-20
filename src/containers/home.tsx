@@ -135,12 +135,14 @@ export function LeftHomeContent({
 
 export function RightHomeContent({
     books,
+    isLoading = false,
     page,
     totalPages,
     onPrevPage,
     onNextPage,
 }: {
     books: BookItem[];
+    isLoading?: boolean;
     page: number;
     totalPages: number;
     onPrevPage: () => void;
@@ -148,7 +150,7 @@ export function RightHomeContent({
 }) {
     return (
         <div className="relative flex h-full w-full flex-col px-24 pt-[4.5rem]">
-            {books.length > 0 ? (
+            {!isLoading && books.length > 0 ? (
                 <div className="grid grid-cols-2 gap-x-20 gap-y-6">
                     {books.map(book => (
                         <BookCard key={book.isbn} book={book} />

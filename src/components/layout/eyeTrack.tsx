@@ -91,6 +91,7 @@ export default function EyeTrack({ onGazeUpdate }: EyeTrackProps) {
         calDy: 0,
     });
 
+    const [hudVisible, setHudVisible] = useState(true);
     const [calibrationOpen, setCalibrationOpen] = useState(true);
     const [calibrationPhase, setCalibrationPhase] = useState<CalibrationPhase>('collect');
     const [calibrationIndex, setCalibrationIndex] = useState(0);
@@ -844,28 +845,47 @@ export default function EyeTrack({ onGazeUpdate }: EyeTrackProps) {
                         />
                     </div>
 
-                    <div className="fixed right-4 top-4 z-[2147483647] pointer-events-auto w-[320px] rounded-lg border border-emerald-300/40 bg-black/70 p-3 text-[11px] text-emerald-100 backdrop-blur">
-                        <div className="mb-2 flex items-center justify-between">
-                            <strong className="text-xs tracking-wide">EyeTrack Dev HUD</strong>
-                            <span className={`rounded px-1.5 py-0.5 text-[10px] ${debugInfo.isFixating ? 'bg-emerald-500/30 text-emerald-100' : 'bg-amber-500/30 text-amber-100'}`}>
-                                {debugInfo.isFixating ? 'FIXATION' : 'SACCADE'}
-                            </span>
+                    {hudVisible ? (
+                        <div className="fixed right-4 top-4 z-[2147483647] pointer-events-auto w-[320px] rounded-lg border border-emerald-300/40 bg-black/70 p-3 text-[11px] text-emerald-100 backdrop-blur">
+                            <div className="mb-2 flex items-center justify-between">
+                                <strong className="text-xs tracking-wide">EyeTrack Dev HUD</strong>
+                                <div className="flex items-center gap-2">
+                                    <span className={`rounded px-1.5 py-0.5 text-[10px] ${debugInfo.isFixating ? 'bg-emerald-500/30 text-emerald-100' : 'bg-amber-500/30 text-amber-100'}`}>
+                                        {debugInfo.isFixating ? 'FIXATION' : 'SACCADE'}
+                                    </span>
+                                    <button
+                                        type="button"
+                                        onClick={() => setHudVisible(false)}
+                                        className="flex h-4 w-4 items-center justify-center rounded text-emerald-300/60 hover:text-emerald-100 transition-colors"
+                                    >
+                                        ✕
+                                    </button>
+                                </div>
+                            </div>
+                            <div className="grid grid-cols-2 gap-x-3 gap-y-1">
+                                <span>Raw</span>
+                                <span>{`${Math.round(debugInfo.baseX)}, ${Math.round(debugInfo.baseY)}`}</span>
+                                <span>Corrected</span>
+                                <span>{`${Math.round(debugInfo.correctedX)}, ${Math.round(debugInfo.correctedY)}`}</span>
+                                <span>Final</span>
+                                <span>{`${Math.round(debugInfo.finalX)}, ${Math.round(debugInfo.finalY)}`}</span>
+                                <span>Samples</span>
+                                <span>{debugInfo.sampleCount}</span>
+                                <span>Cal Offset</span>
+                                <span>{`${Math.round(debugInfo.calDx)}, ${Math.round(debugInfo.calDy)}`}</span>
+                                <span>Sentence</span>
+                                <span className="truncate">{debugInfo.closestId ?? '-'}</span>
+                            </div>
                         </div>
-                        <div className="grid grid-cols-2 gap-x-3 gap-y-1">
-                            <span>Raw</span>
-                            <span>{`${Math.round(debugInfo.baseX)}, ${Math.round(debugInfo.baseY)}`}</span>
-                            <span>Corrected</span>
-                            <span>{`${Math.round(debugInfo.correctedX)}, ${Math.round(debugInfo.correctedY)}`}</span>
-                            <span>Final</span>
-                            <span>{`${Math.round(debugInfo.finalX)}, ${Math.round(debugInfo.finalY)}`}</span>
-                            <span>Samples</span>
-                            <span>{debugInfo.sampleCount}</span>
-                            <span>Cal Offset</span>
-                            <span>{`${Math.round(debugInfo.calDx)}, ${Math.round(debugInfo.calDy)}`}</span>
-                            <span>Sentence</span>
-                            <span className="truncate">{debugInfo.closestId ?? '-'}</span>
-                        </div>
-                    </div>
+                    ) : (
+                        <button
+                            type="button"
+                            onClick={() => setHudVisible(true)}
+                            className="fixed right-4 top-4 z-[2147483647] pointer-events-auto rounded-md border border-emerald-300/40 bg-black/70 px-2 py-1 text-[10px] text-emerald-300/60 hover:text-emerald-100 backdrop-blur transition-colors"
+                        >
+                            HUD
+                        </button>
+                    )}
                 </>
             )}
 
