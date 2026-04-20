@@ -77,7 +77,7 @@ export default function Read() {
     const { setBookContent, setActiveGazeId, readingText, setReadingText, setOverlayContent } = useBook();
     const [currentPage, setCurrentPage] = useState(0);
     const [loaded, setLoaded] = useState(false);
-    const isFlippingRef = useRef(false);
+    const prevPageRef = useRef(0);
     const stickyIdRef = useRef<string | null>(null);
     const stickyTimeoutRef = useRef<any>(null);
     const gazeStartTimeRef = useRef<number | null>(null);
@@ -140,29 +140,50 @@ export default function Read() {
         return result;
     }, [readingText]);
 
-    const currentPageRef = useRef(currentPage);
-    useEffect(() => {
-        currentPageRef.current = currentPage;
-    }, [currentPage]);
-
-    const pagesRef = useRef(pages);
-    useEffect(() => {
-        pagesRef.current = pages;
-    }, [pages]);
-
     useEffect(() => {
         const leftPage = pages[currentPage] || '';
         const rightPage = pages[currentPage + 1] || '';
+        const direction = currentPage < prevPageRef.current ? 'backward' : 'forward';
 
         setBookContent(
             <PageContent text={leftPage} idPrefix="left" />,
-            <PageContent text={rightPage} delay={1200} idPrefix="right" />
+            <PageContent text={rightPage} delay={1200} idPrefix="right" />,
+            direction,
+            { preserveOverlay: true }
         );
+        prevPageRef.current = currentPage;
     }, [setBookContent, currentPage, pages]);
+
+    const resetGazeTrackingState = useCallback(() => {
+        if (suggestionTimeoutRef.current) {
+            clearTimeout(suggestionTimeoutRef.current);
+            suggestionTimeoutRef.current = null;
+        }
+        if (stickyTimeoutRef.current) {
+            clearTimeout(stickyTimeoutRef.current);
+            stickyTimeoutRef.current = null;
+        }
+        setActiveGazeId(null);
+        stickyIdRef.current = null;
+        gazeStartTimeRef.current = null;
+        setSuggestionRef.current(null);
+        setParaphrasedResult(null);
+    }, [setActiveGazeId]);
+
+    const handlePrevPage = useCallback(() => {
+        if (currentPage <= 0) return;
+        resetGazeTrackingState();
+        setCurrentPage(prev => Math.max(0, prev - 2));
+    }, [currentPage, resetGazeTrackingState]);
+
+    const handleNextPage = useCallback(() => {
+        if (currentPage + 2 >= pages.length) return;
+        resetGazeTrackingState();
+        setCurrentPage(prev => prev + 2);
+    }, [currentPage, pages.length, resetGazeTrackingState]);
 
     const handleGazeUpdate = useCallback((id: string | null) => {
         const now = Date.now();
-        const bookInfo = currentBookInfoRef.current;
 
         if (stickyIdRef.current && stickyIdRef.current !== id) {
             if (suggestionTimeoutRef.current) {
@@ -233,22 +254,6 @@ export default function Read() {
                 }, 150);
             }
         }
-
-        if (id && id.startsWith('right-sentence-') && !isFlippingRef.current) {
-            const rightPageSentences = (pagesRef.current[currentPageRef.current + 1] || '').split(/[.!?]\s+/);
-            const sentenceIdx = parseInt(id.split('-').pop() || '0');
-
-            if (sentenceIdx === rightPageSentences.length - 1) {
-                if (currentPageRef.current + 2 < pagesRef.current.length) {
-                    isFlippingRef.current = true;
-                    setTimeout(() => {
-                        setCurrentPage(prev => prev + 2);
-                        setActiveGazeId(null);
-                        isFlippingRef.current = false;
-                    }, 1500);
-                }
-            }
-        }
     }, [setActiveGazeId]);
 
     useEffect(() => {
@@ -274,14 +279,49 @@ export default function Read() {
         };
     }, [handleGazeUpdate, setOverlayContent]);
 
+    useEffect(() => {
+        const handleKeyDown = (e: KeyboardEvent) => {
+            if (e.key === 'ArrowLeft') {
+                handlePrevPage();
+            }
+            if (e.key === 'ArrowRight') {
+                handleNextPage();
+            }
+        };
+
+        window.addEventListener('keydown', handleKeyDown);
+        return () => {
+            window.removeEventListener('keydown', handleKeyDown);
+        };
+    }, [handlePrevPage, handleNextPage]);
+
     if (!loaded) return null;
 
     const navButtonStyle = "flex h-14 w-28 items-center justify-center rounded-lg text-white font-bold bg-gradient-to-br from-[#409659] to-[#38844E] shadow-[0_4px_10px_rgba(0,0,0,0.2)] transition-all duration-300 hover:translate-x-20 hover:scale-105 hover:shadow-[5px_5px_15px_rgba(0,0,0,0.3)] hover:brightness-110 active:scale-95 cursor-pointer pr-4 -ml-14 text-base";
+    const arrowButtonStyle = "flex h-16 w-16 items-center justify-center rounded-full bg-[#111827]/85 text-white text-3xl font-semibold shadow-[0_10px_28px_rgba(0,0,0,0.45)] ring-1 ring-white/20 transition-all duration-200 hover:scale-105 hover:bg-[#0b1220] disabled:opacity-60 disabled:cursor-not-allowed";
+    const canGoPrev = currentPage > 0;
+    const canGoNext = currentPage + 2 < pages.length;
 
     return (
         <>
-            <div className="absolute inset-0 z-[100] pointer-events-none">
-                <div className="relative w-[80rem] h-[50rem] mx-auto">
+            <div className="fixed inset-0 z-[2147483000] pointer-events-none flex items-center justify-center">
+                <div className="relative w-[80rem] h-[50rem]">
+                    <button
+                        onClick={handlePrevPage}
+                        disabled={!canGoPrev}
+                        className={`absolute -left-20 top-1/2 -translate-y-1/2 pointer-events-auto ${arrowButtonStyle}`}
+                        aria-label="이전 페이지"
+                    >
+                        &#8592;
+                    </button>
+                    <button
+                        onClick={handleNextPage}
+                        disabled={!canGoNext}
+                        className={`absolute -right-20 top-1/2 -translate-y-1/2 pointer-events-auto ${arrowButtonStyle}`}
+                        aria-label="다음 페이지"
+                    >
+                        &#8594;
+                    </button>
                     <div className="absolute -right-6 bottom-0 flex flex-col gap-2 pointer-events-auto">
                         <button className={navButtonStyle}>
                             원작 보기

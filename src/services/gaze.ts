@@ -1,4 +1,4 @@
-import { getAccessToken } from '@/lib/auth';
+import { fetchWithAuthRetry } from '@/lib/auth';
 
 const API_BASE =
   typeof window !== 'undefined'
@@ -20,20 +20,17 @@ export interface GazeEventResponse {
 
 export async function recordGazeEvent(payload: GazeEventPayload): Promise<GazeEventResponse> {
   const url = `${API_BASE}/api/v1/gaze-events`;
-  const headers: Record<string, string> = {
-    'Content-Type': 'application/json',
-  };
-
-  const token = getAccessToken();
-  if (token) {
-    headers['Authorization'] = `Bearer ${token}`;
-  }
-
-  const res = await fetch(url, {
-    method: 'POST',
-    headers,
-    body: JSON.stringify(payload),
-  });
+  const res = await fetchWithAuthRetry(
+    url,
+    {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify(payload),
+    },
+    { auth: 'optional' }
+  );
 
   if (!res.ok) {
     const text = await res.text();

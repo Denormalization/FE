@@ -1,4 +1,4 @@
-import { getAccessToken } from '@/lib/auth';
+import { fetchWithAuthRetry } from '@/lib/auth';
 
 const API_BASE =
   typeof window !== 'undefined'
@@ -12,17 +12,11 @@ export interface AdminUser {
 }
 
 export async function fetchAdminUsers(): Promise<AdminUser[]> {
-  const token = getAccessToken();
-  if (!token) {
-    throw new Error('로그인이 필요합니다.');
-  }
-
-  const res = await fetch(`${API_BASE}/api/v1/admin/users`, {
-    method: 'GET',
-    headers: {
-      Authorization: `Bearer ${token}`,
-    },
-  });
+  const res = await fetchWithAuthRetry(
+    `${API_BASE}/api/v1/admin/users`,
+    { method: 'GET' },
+    { auth: 'required' }
+  );
 
   if (!res.ok) {
     const text = await res.text();

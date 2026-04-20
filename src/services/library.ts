@@ -1,4 +1,4 @@
-import { getAccessToken } from '@/lib/auth';
+import { fetchWithAuthRetry } from '@/lib/auth';
 import type { GraphData } from '@/types/graph';
 
 const API_BASE =
@@ -10,17 +10,17 @@ const SUB_COLORS = ['#38844E', '#409659', '#4E7A5D', '#6B9078', '#2D5A3C', '#558
 const randomColor = () => SUB_COLORS[Math.floor(Math.random() * SUB_COLORS.length)];
 
 export async function addKeyword(term: string, contextSentence: string): Promise<void> {
-  const token = getAccessToken();
-  if (!token) throw new Error('로그인이 필요합니다.');
-
-  const res = await fetch(`${API_BASE}/api/v1/library`, {
-    method: 'POST',
-    headers: {
-      'Content-Type': 'application/json',
-      Authorization: `Bearer ${token}`,
+  const res = await fetchWithAuthRetry(
+    `${API_BASE}/api/v1/library`,
+    {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({ term, contextSentence }),
     },
-    body: JSON.stringify({ term, contextSentence }),
-  });
+    { auth: 'required' }
+  );
 
   if (res.status === 409) {
     throw new Error('이미 존재하는 키워드입니다.');
@@ -33,12 +33,11 @@ export async function addKeyword(term: string, contextSentence: string): Promise
 }
 
 export async function fetchKeywordGraph(): Promise<GraphData> {
-  const token = getAccessToken();
-  if (!token) throw new Error('로그인이 필요합니다.');
-
-  const res = await fetch(`${API_BASE}/api/v1/library/graph`, {
-    headers: { Authorization: `Bearer ${token}` },
-  });
+  const res = await fetchWithAuthRetry(
+    `${API_BASE}/api/v1/library/graph`,
+    {},
+    { auth: 'required' }
+  );
 
   if (!res.ok) {
     const text = await res.text();
@@ -58,17 +57,17 @@ export async function fetchKeywordGraph(): Promise<GraphData> {
 }
 
 export async function updateKeyword(id: string, term: string, contextSentence: string): Promise<void> {
-  const token = getAccessToken();
-  if (!token) throw new Error('로그인이 필요합니다.');
-
-  const res = await fetch(`${API_BASE}/api/v1/library/${encodeURIComponent(id)}`, {
-    method: 'PATCH',
-    headers: {
-      'Content-Type': 'application/json',
-      Authorization: `Bearer ${token}`,
+  const res = await fetchWithAuthRetry(
+    `${API_BASE}/api/v1/library/${encodeURIComponent(id)}`,
+    {
+      method: 'PATCH',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({ term, contextSentence }),
     },
-    body: JSON.stringify({ term, contextSentence }),
-  });
+    { auth: 'required' }
+  );
 
   if (res.status === 404) {
     throw new Error('요청한 키워드를 찾을 수 없습니다.');
@@ -83,13 +82,11 @@ export async function updateKeyword(id: string, term: string, contextSentence: s
 }
 
 export async function deleteKeyword(id: string): Promise<void> {
-  const token = getAccessToken();
-  if (!token) throw new Error('로그인이 필요합니다.');
-
-  const res = await fetch(`${API_BASE}/api/v1/library/${encodeURIComponent(id)}`, {
-    method: 'DELETE',
-    headers: { Authorization: `Bearer ${token}` },
-  });
+  const res = await fetchWithAuthRetry(
+    `${API_BASE}/api/v1/library/${encodeURIComponent(id)}`,
+    { method: 'DELETE' },
+    { auth: 'required' }
+  );
 
   if (res.status === 404) {
     throw new Error('요청한 키워드를 찾을 수 없습니다.');

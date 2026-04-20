@@ -1,4 +1,4 @@
-import { getAccessToken } from '@/lib/auth';
+import { fetchWithAuthRetry } from '@/lib/auth';
 
 const API_BASE =
   typeof window !== 'undefined'
@@ -35,14 +35,7 @@ export async function fetchBooks(params?: {
   }
 
   const url = `${API_BASE}/api/v1/books?${query.toString()}`;
-  const headers: Record<string, string> = {};
-
-  const token = getAccessToken();
-  if (token) {
-    headers['Authorization'] = `Bearer ${token}`;
-  }
-
-  const res = await fetch(url, { headers });
+  const res = await fetchWithAuthRetry(url, {}, { auth: 'optional' });
 
   if (!res.ok) {
     const text = await res.text();
@@ -79,14 +72,7 @@ export interface BookDetail {
 
 export async function fetchBookDetail(isbn: string): Promise<BookDetail> {
   const url = `${API_BASE}/api/v1/books/${isbn}`;
-  const headers: Record<string, string> = {};
-
-  const token = getAccessToken();
-  if (token) {
-    headers['Authorization'] = `Bearer ${token}`;
-  }
-
-  const res = await fetch(url, { headers });
+  const res = await fetchWithAuthRetry(url, {}, { auth: 'optional' });
 
   if (!res.ok) {
     const text = await res.text();
@@ -101,14 +87,7 @@ export async function fetchChapterContent(
   chapterId: string
 ): Promise<ChapterContent> {
   const url = `${API_BASE}/api/v1/books/${encodeURIComponent(isbn)}/chapters/${encodeURIComponent(chapterId)}`;
-  const headers: Record<string, string> = {};
-
-  const token = getAccessToken();
-  if (token) {
-    headers['Authorization'] = `Bearer ${token}`;
-  }
-
-  const res = await fetch(url, { headers });
+  const res = await fetchWithAuthRetry(url, {}, { auth: 'optional' });
 
   if (!res.ok) {
     const text = await res.text();

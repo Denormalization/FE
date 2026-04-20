@@ -5,7 +5,7 @@ import Navigation from './navigation';
 import { useBook } from '@/context/bookContext';
 
 export function Book() {
-    const { leftContent, rightContent, overlayContent, flipKey, prevContent } = useBook();
+    const { leftContent, rightContent, overlayContent, flipKey, flipDirection, prevContent } = useBook();
     const [isFlipping, setIsFlipping] = useState(false);
     const [pageContent, setPageContent] = useState({ left: leftContent, right: rightContent });
     const isFirstRender = useRef(true);
@@ -49,6 +49,7 @@ export function Book() {
         <div className="flex items-center justify-center">
             <div className="relative">
                 <div
+                    data-book-root="true"
                     className="
                         relative z-10 flex
                         w-[80rem] h-[50rem]
@@ -77,25 +78,47 @@ export function Book() {
                     </div>
 
                     {isFlipping && prevContent && (
-                        <div
-                            className="absolute left-1/2 top-0 w-1/2 h-full z-[50] pointer-events-none [transform-style:preserve-3d] animate-real-flip"
-                            style={{ transformOrigin: 'left center' }}
-                        >
-                            <div className="absolute inset-0 bg-[#F5F5F5] rounded-r-lg backface-hidden border-l border-black/5">
-                                <div className="h-full w-full pointer-events-none overflow-hidden">
-                                    {prevContent.rightContent}
-                                </div>
-                            </div>
-
+                        flipDirection === 'backward' ? (
                             <div
-                                className="absolute inset-0 bg-[#FAFAFA] rounded-l-lg border-r border-black/5"
-                                style={{ transform: 'rotateY(180deg)', backfaceVisibility: 'hidden' }}
+                                className="absolute left-0 top-0 w-1/2 h-full z-[50] pointer-events-none [transform-style:preserve-3d] animate-real-flip-backward"
+                                style={{ transformOrigin: 'right center' }}
                             >
-                                <div className="h-full w-full pointer-events-none overflow-hidden">
-                                    {leftContent}
+                                <div className="absolute inset-0 bg-[#F5F5F5] rounded-l-lg backface-hidden border-r border-black/5">
+                                    <div className="h-full w-full pointer-events-none overflow-hidden">
+                                        {prevContent.leftContent}
+                                    </div>
+                                </div>
+
+                                <div
+                                    className="absolute inset-0 bg-[#FAFAFA] rounded-r-lg border-l border-black/5"
+                                    style={{ transform: 'rotateY(-180deg)', backfaceVisibility: 'hidden' }}
+                                >
+                                    <div className="h-full w-full pointer-events-none overflow-hidden">
+                                        {rightContent}
+                                    </div>
                                 </div>
                             </div>
-                        </div>
+                        ) : (
+                            <div
+                                className="absolute left-1/2 top-0 w-1/2 h-full z-[50] pointer-events-none [transform-style:preserve-3d] animate-real-flip"
+                                style={{ transformOrigin: 'left center' }}
+                            >
+                                <div className="absolute inset-0 bg-[#F5F5F5] rounded-r-lg backface-hidden border-l border-black/5">
+                                    <div className="h-full w-full pointer-events-none overflow-hidden">
+                                        {prevContent.rightContent}
+                                    </div>
+                                </div>
+
+                                <div
+                                    className="absolute inset-0 bg-[#FAFAFA] rounded-l-lg border-r border-black/5"
+                                    style={{ transform: 'rotateY(180deg)', backfaceVisibility: 'hidden' }}
+                                >
+                                    <div className="h-full w-full pointer-events-none overflow-hidden">
+                                        {leftContent}
+                                    </div>
+                                </div>
+                            </div>
+                        )
                     )}
 
                     <div className="absolute left-1/2 top-0 bottom-0 w-[1px] -ml-[0.5px] bg-black/5 z-[60]" />

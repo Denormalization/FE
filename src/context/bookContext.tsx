@@ -11,9 +11,15 @@ interface BookContextType {
     rightContent: ReactNode;
     overlayContent: ReactNode;
     flipKey: number;
+    flipDirection: 'forward' | 'backward';
     readingText: string;
     readingTitle: string;
-    setBookContent: (left: ReactNode, right: ReactNode) => void;
+    setBookContent: (
+        left: ReactNode,
+        right: ReactNode,
+        direction?: 'forward' | 'backward',
+        options?: { preserveOverlay?: boolean }
+    ) => void;
     updateBookContent: (left: ReactNode, right: ReactNode) => void;
     setOverlayContent: (overlay: ReactNode) => void;
     activeGazeId: string | null;
@@ -22,7 +28,7 @@ interface BookContextType {
     currentIsbn: string | null;
     currentChapterId: string | null;
     setBookIds: (isbn: string, chapterId: string) => void;
-    triggerFlip: () => void;
+    triggerFlip: (direction?: 'forward' | 'backward') => void;
     prevContent: ContentState | null;
 }
 
@@ -36,6 +42,7 @@ export function BookProvider({ children }: { children: ReactNode }) {
     const [overlayContent, setOverlayContent] = useState<ReactNode>(null);
     const [prevContent, setPrevContent] = useState<ContentState | null>(null);
     const [flipKey, setFlipKey] = useState(0);
+    const [flipDirection, setFlipDirection] = useState<'forward' | 'backward'>('forward');
     const [activeGazeId, setActiveGazeId] = useState<string | null>(null);
     const [readingText, setReadingTextState] = useState('');
     const [readingTitle, setReadingTitle] = useState('');
@@ -47,14 +54,23 @@ export function BookProvider({ children }: { children: ReactNode }) {
         contentRef.current = content;
     }, [content]);
 
-    const triggerFlip = useCallback(() => {
+    const triggerFlip = useCallback((direction: 'forward' | 'backward' = 'forward') => {
+        setFlipDirection(direction);
         setFlipKey(prev => prev + 1);
     }, []);
 
-    const setBookContent = useCallback((left: ReactNode, right: ReactNode) => {
+    const setBookContent = useCallback((
+        left: ReactNode,
+        right: ReactNode,
+        direction: 'forward' | 'backward' = 'forward',
+        options?: { preserveOverlay?: boolean }
+    ) => {
         setPrevContent(contentRef.current);
         setContent({ leftContent: left, rightContent: right });
-        setOverlayContent(null);
+        setFlipDirection(direction);
+        if (!options?.preserveOverlay) {
+            setOverlayContent(null);
+        }
         setFlipKey(prev => prev + 1);
     }, []);
 
@@ -79,6 +95,7 @@ export function BookProvider({ children }: { children: ReactNode }) {
         ...content,
         overlayContent,
         flipKey,
+        flipDirection,
         readingText,
         readingTitle,
         currentIsbn,
@@ -92,7 +109,7 @@ export function BookProvider({ children }: { children: ReactNode }) {
         activeGazeId,
         setActiveGazeId,
         prevContent
-    }), [content, overlayContent, flipKey, readingText, readingTitle, currentIsbn, currentChapterId, setBookIds, setBookContent, updateBookContent, setOverlayContentStable, setReadingText, triggerFlip, activeGazeId, prevContent]);
+    }), [content, overlayContent, flipKey, flipDirection, readingText, readingTitle, currentIsbn, currentChapterId, setBookIds, setBookContent, updateBookContent, setOverlayContentStable, setReadingText, triggerFlip, activeGazeId, prevContent]);
 
     return (
         <BookContext.Provider value={value}>

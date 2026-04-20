@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect, useCallback, useRef } from 'react';
-import { getAccessToken } from '@/lib/auth';
+import { fetchWithAuthRetry } from '@/lib/auth';
 import { useBook } from '@/context/bookContext';
 
 const API_BASE =
@@ -201,9 +201,6 @@ export default function AdminUploadPage() {
     const selectedFile = fileRef.current;
     if (!selectedFile) return alert('파일을 선택해주세요');
 
-    const token = getAccessToken();
-    if (!token) return alert('로그인이 필요합니다');
-
     if (selectedFile.name.endsWith('.txt') && (!meta.title || !meta.isbn)) {
       return alert('.txt 파일은 ISBN과 제목이 필수입니다');
     }
@@ -226,11 +223,14 @@ export default function AdminUploadPage() {
     setResult('');
 
     try {
-      const res = await fetch(`${API_BASE}/api/v1/admin/books`, {
-        method: 'POST',
-        headers: { Authorization: `Bearer ${token}` },
-        body: formData,
-      });
+      const res = await fetchWithAuthRetry(
+        `${API_BASE}/api/v1/admin/books`,
+        {
+          method: 'POST',
+          body: formData,
+        },
+        { auth: 'required' }
+      );
 
       setResultOk(res.ok);
       if (res.ok) {
