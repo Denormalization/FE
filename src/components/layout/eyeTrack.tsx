@@ -27,6 +27,8 @@ type CalibrationPhase = 'collect' | 'validate' | 'done';
 
 const CALIBRATION_SAMPLES_PER_POINT = 3;
 const VALIDATION_SAMPLES_PER_POINT = 2;
+const CALIBRATION_STORAGE_KEY = 'eyetrack_calibration_v1';
+const MIN_STORED_CALIBRATION_SAMPLES = 5;
 
 const clamp = (value: number, min: number, max: number) => Math.max(min, Math.min(max, value));
 
@@ -35,6 +37,39 @@ const median = (values: number[]) => {
     const sorted = [...values].sort((a, b) => a - b);
     const mid = Math.floor(sorted.length / 2);
     return sorted.length % 2 === 0 ? (sorted[mid - 1] + sorted[mid]) / 2 : sorted[mid];
+};
+
+const isFiniteNumber = (value: unknown): value is number => typeof value === 'number' && Number.isFinite(value);
+
+const normalizeCalibrationSamples = (value: unknown): CalibrationSample[] | null => {
+    const source = Array.isArray(value)
+        ? value
+        : value && typeof value === 'object' && Array.isArray((value as { samples?: unknown }).samples)
+            ? (value as { samples: unknown[] }).samples
+            : null;
+
+    if (!source || source.length === 0) return null;
+
+    const normalized = source
+        .map((item) => {
+            if (!item || typeof item !== 'object') return null;
+
+            const sample = item as Partial<CalibrationSample>;
+            const values = [sample.targetX, sample.targetY, sample.gazeX, sample.gazeY, sample.dx, sample.dy];
+            if (!values.every((value) => isFiniteNumber(value))) return null;
+
+            return {
+                targetX: sample.targetX as number,
+                targetY: sample.targetY as number,
+                gazeX: sample.gazeX as number,
+                gazeY: sample.gazeY as number,
+                dx: sample.dx as number,
+                dy: sample.dy as number,
+            };
+        })
+        .filter((sample): sample is CalibrationSample => sample !== null);
+
+    return normalized.length >= MIN_STORED_CALIBRATION_SAMPLES ? normalized : null;
 };
 
 export default function EyeTrack({ onGazeUpdate }: EyeTrackProps) {
@@ -65,6 +100,7 @@ export default function EyeTrack({ onGazeUpdate }: EyeTrackProps) {
     const [pointSampleCount, setPointSampleCount] = useState(0);
     const [viewport, setViewport] = useState({ width: 1280, height: 720 });
     const [portalReady, setPortalReady] = useState(false);
+    const [calibrationBootstrapped, setCalibrationBootstrapped] = useState(false);
 
     const targetPosRef = useRef({ x: 500, y: 500 });
     const currentPosRef = useRef({ x: 500, y: 500 });
@@ -159,6 +195,25 @@ export default function EyeTrack({ onGazeUpdate }: EyeTrackProps) {
     const resetDwellState = () => {
         candidateIdRef.current = null;
         dwellCountRef.current = 0;
+    };
+
+    const persistCalibrationSamples = () => {
+        if (typeof window === 'undefined') return;
+        if (calibrationSamplesRef.current.length === 0) return;
+
+        try {
+            window.localStorage.setItem(CALIBRATION_STORAGE_KEY, JSON.stringify({
+                samples: calibrationSamplesRef.current,
+                savedAt: Date.now(),
+            }));
+        } catch (error) {
+            console.warn('Failed to persist calibration samples:', error);
+        }
+    };
+
+    const closeCalibrationWithSave = () => {
+        persistCalibrationSamples();
+        setCalibrationOpen(false);
     };
 
     const startCalibration = () => {
@@ -293,6 +348,43 @@ export default function EyeTrack({ onGazeUpdate }: EyeTrackProps) {
 
     useEffect(() => {
         setPortalReady(true);
+    }, []);
+
+    useEffect(() => {
+        if (typeof window === 'undefined') return;
+
+        try {
+            const raw = window.localStorage.getItem(CALIBRATION_STORAGE_KEY);
+            if (!raw) {
+                setCalibrationOpen(true);
+                setCalibrationBootstrapped(true);
+                return;
+            }
+
+            const parsed = JSON.parse(raw);
+            const restoredSamples = normalizeCalibrationSamples(parsed);
+
+            if (!restoredSamples) {
+                window.localStorage.removeItem(CALIBRATION_STORAGE_KEY);
+                setCalibrationOpen(true);
+                setCalibrationBootstrapped(true);
+                return;
+            }
+
+            calibrationSamplesRef.current = restoredSamples;
+            setCalibrationPhase('done');
+            setCalibrationIndex(0);
+            setValidationErrors([]);
+            setValidationMeanError(null);
+            setPointSampleCount(0);
+            setCalibrationMessage('저장된 보정값을 불러왔습니다.');
+            setCalibrationOpen(false);
+        } catch (error) {
+            console.warn('Failed to restore calibration samples:', error);
+            setCalibrationOpen(true);
+        } finally {
+            setCalibrationBootstrapped(true);
+        }
     }, []);
 
     useEffect(() => {
@@ -600,7 +692,7 @@ export default function EyeTrack({ onGazeUpdate }: EyeTrackProps) {
 
     const activeCalibrationPoints = calibrationPhase === 'validate' ? validationPoints : calibrationPoints;
 
-    const calibrationLayer = (
+    const calibrationLayer = calibrationBootstrapped ? (
         <>
             {!calibrationOpen && (
                 <button
@@ -649,7 +741,7 @@ export default function EyeTrack({ onGazeUpdate }: EyeTrackProps) {
                                 <div className="flex gap-2">
                                     <button
                                         type="button"
-                                        onClick={() => setCalibrationOpen(false)}
+                                        onClick={closeCalibrationWithSave}
                                         className="rounded-md bg-emerald-600 px-3 py-1.5 text-xs font-semibold text-white"
                                     >
                                         시작하기
@@ -704,7 +796,7 @@ export default function EyeTrack({ onGazeUpdate }: EyeTrackProps) {
                 </div>
             )}
         </>
-    );
+    ) : null;
 
     return (
         <>
