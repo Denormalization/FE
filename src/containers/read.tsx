@@ -9,6 +9,7 @@ import { POEM_TEXT } from '@/mock/read';
 import EyeTrack from '@/components/layout/eyeTrack';
 import { fetchChapterContent } from '@/services/books';
 import { recordGazeEvent } from '@/services/gaze';
+import { addKeyword } from '@/services/library';
 
 const PageContent = (props: {
     text: string;
@@ -113,6 +114,10 @@ export default function Read() {
         }
         setParaphrasing(true);
         setParaphrasedResult(null);
+
+        const contextSentence = [prevText, suggestion.text, nextText].filter(Boolean).join(' ');
+        addKeyword(suggestion.text, contextSentence).catch(() => {});
+
         try {
             const res = await fetch(`${AI_BASE}/paraphrase`, {
                 method: 'POST',
