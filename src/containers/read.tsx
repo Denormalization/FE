@@ -17,7 +17,7 @@ const PageContent = (props: {
 }) => {
     const { text, delay = 0, idPrefix } = props;
     const [visible, setVisible] = useState(false);
-    const { activeGazeId } = useBook();
+    const { activeGazeId, adaptedSentences } = useBook();
 
     const sentences = useMemo(() => {
         if (!text) return [];
@@ -48,7 +48,7 @@ const PageContent = (props: {
         <div className="flex h-full w-full px-24 py-12">
             <div
                 style={pageStyle}
-                className={"text-gray-700 text-xl leading-[2.5] text-justify " + visibilityClass}
+                className={"text-black text-xl leading-[2.5] text-justify " + visibilityClass}
             >
                 {sentences.map((sentence, idx) => {
                     const sentenceId = idPrefix + "-sentence-" + idx;
@@ -59,11 +59,12 @@ const PageContent = (props: {
                             key={idx}
                             id={sentenceId}
                             className={
-                                "transition-all duration-500 px-1 py-0.5 mx-0.5 " +
-                                (isActive ? "border-b-2 border-amber-400/80 z-10 bg-amber-100/30" : "text-gray-500 font-medium")
+                                "transition-all duration-700 px-1 py-0.5 mx-0.5 " +
+                                (isActive ? "border-b-2 border-amber-400/80 z-10 bg-amber-100/30" :
+                                    adaptedSentences[sentence] ? "text-gray-500 font-medium animate-pulse-once" : "text-gray-500 font-medium")
                             }
                         >
-                            {sentence + " "}
+                            {adaptedSentences[sentence] || (sentence + " ")}
                         </span>
                     );
                 })}
@@ -74,7 +75,7 @@ const PageContent = (props: {
 
 export default function Read() {
     const router = useRouter();
-    const { setBookContent, setActiveGazeId, readingText, setReadingText, setOverlayContent } = useBook();
+    const { setBookContent, setActiveGazeId, readingText, setReadingText, setOverlayContent, setAdaptedSentence } = useBook();
     const [currentPage, setCurrentPage] = useState(0);
     const [loaded, setLoaded] = useState(false);
     const prevPageRef = useRef(0);
@@ -124,7 +125,19 @@ export default function Read() {
             });
             if (!res.ok) throw new Error('각색 요청 실패');
             const data = await res.json() as { result: string };
+            setAdaptedSentence(suggestion.text, data.result);
             setParaphrasedResult(data.result);
+
+            // 2초 후 모달 자동 닫기
+            setTimeout(() => {
+                suggestionLockRef.current = false;
+                if (suggestionDismissTimerRef.current) {
+                    clearTimeout(suggestionDismissTimerRef.current);
+                    suggestionDismissTimerRef.current = null;
+                }
+                setSuggestion(null);
+                setParaphrasedResult(null);
+            }, 2000);
         } catch {
             setParaphrasedResult('각색 중 오류가 발생했습니다.');
         } finally {
@@ -385,24 +398,13 @@ export default function Read() {
                                 </div>
                             ) : paraphrasedResult ? (
                                 <>
-                                    <h3 className="text-[13px] font-bold text-gray-800 mb-2 leading-snug font-bookmyungjo">각색 결과</h3>
-                                    <p className="text-[12px] text-gray-600 leading-relaxed mb-4 font-bookmyungjo bg-amber-50/60 rounded-lg p-3 border border-amber-100">
-                                        {paraphrasedResult}
+                                    <h3 className="text-[13px] font-bold text-green-600 mb-2 leading-snug font-bookmyungjo flex items-center gap-2">
+                                        <span className="w-2 h-2 bg-green-500 rounded-full animate-ping" />
+                                        각색이 완료되었습니다!
+                                    </h3>
+                                    <p className="text-[11px] text-gray-400 leading-relaxed font-bookmyungjo">
+                                        본문에서 새롭게 각색된 문장을 확인해보세요.
                                     </p>
-                                    <button
-                                        onClick={() => {
-                                            suggestionLockRef.current = false;
-                                            if (suggestionDismissTimerRef.current) {
-                                                clearTimeout(suggestionDismissTimerRef.current);
-                                                suggestionDismissTimerRef.current = null;
-                                            }
-                                            setSuggestion(null);
-                                            setParaphrasedResult(null);
-                                        }}
-                                        className="w-full py-2 bg-gray-100 text-gray-500 rounded-xl text-[12px] font-medium hover:bg-gray-200 active:scale-95 transition-all"
-                                    >
-                                        닫기
-                                    </button>
                                 </>
                             ) : (
                                 <>
@@ -442,6 +444,14 @@ export default function Read() {
                     @keyframes suggestionIn {
                         from { opacity: 0; transform: scale(0.85) translateY(-6px); }
                         to   { opacity: 1; transform: scale(1) translateY(0); }
+                    }
+                    @keyframes pulseOnce {
+                        0% { background-color: rgba(251, 191, 36, 0); }
+                        50% { background-color: rgba(251, 191, 36, 0.2); }
+                        100% { background-color: rgba(251, 191, 36, 0); }
+                    }
+                    .animate-pulse-once {
+                        animation: pulseOnce 2s ease-in-out;
                     }
                 `}</style>
                 </div>,

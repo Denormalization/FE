@@ -30,6 +30,8 @@ interface BookContextType {
     setBookIds: (isbn: string, chapterId: string) => void;
     triggerFlip: (direction?: 'forward' | 'backward') => void;
     prevContent: ContentState | null;
+    adaptedSentences: Record<string, string>;
+    setAdaptedSentence: (original: string, adapted: string) => void;
 }
 
 const BookContext = createContext<BookContextType | undefined>(undefined);
@@ -48,6 +50,7 @@ export function BookProvider({ children }: { children: ReactNode }) {
     const [readingTitle, setReadingTitle] = useState('');
     const [currentIsbn, setCurrentIsbn] = useState<string | null>(null);
     const [currentChapterId, setCurrentChapterId] = useState<string | null>(null);
+    const [adaptedSentences, setAdaptedSentences] = useState<Record<string, string>>({});
 
     const contentRef = useRef(content);
     useEffect(() => {
@@ -91,6 +94,13 @@ export function BookProvider({ children }: { children: ReactNode }) {
         setCurrentChapterId(chapterId);
     }, []);
 
+    const setAdaptedSentence = useCallback((original: string, adapted: string) => {
+        setAdaptedSentences(prev => ({
+            ...prev,
+            [original]: adapted
+        }));
+    }, []);
+
     const value = useMemo(() => ({
         ...content,
         overlayContent,
@@ -108,8 +118,10 @@ export function BookProvider({ children }: { children: ReactNode }) {
         triggerFlip,
         activeGazeId,
         setActiveGazeId,
-        prevContent
-    }), [content, overlayContent, flipKey, flipDirection, readingText, readingTitle, currentIsbn, currentChapterId, setBookIds, setBookContent, updateBookContent, setOverlayContentStable, setReadingText, triggerFlip, activeGazeId, prevContent]);
+        prevContent,
+        adaptedSentences,
+        setAdaptedSentence
+    }), [content, overlayContent, flipKey, flipDirection, readingText, readingTitle, currentIsbn, currentChapterId, setBookIds, setBookContent, updateBookContent, setOverlayContentStable, setReadingText, triggerFlip, activeGazeId, prevContent, adaptedSentences, setAdaptedSentence]);
 
     return (
         <BookContext.Provider value={value}>
