@@ -37,11 +37,53 @@ export default function BookDB() {
 
         const g = svg.append('g');
 
-        svg.call(
-            d3.zoom<SVGSVGElement, unknown>()
-                .scaleExtent([0.5, 5])
-                .on('zoom', e => g.attr('transform', e.transform))
-        );
+        const zoom = d3.zoom<SVGSVGElement, unknown>()
+            .scaleExtent([0.5, 5])
+            .on('zoom', e => g.attr('transform', e.transform))
+            .on('end', e => {
+                localStorage.setItem('BOOK_DB_TRANSFORM', JSON.stringify(e.transform));
+            });
+
+        svg.call(zoom);
+
+        const savedTransform = localStorage.getItem('BOOK_DB_TRANSFORM');
+        if (savedTransform) {
+            try {
+                const parsedTransform = JSON.parse(savedTransform);
+                const t = d3.zoomIdentity.translate(parsedTransform.x, parsedTransform.y).scale(parsedTransform.k);
+                svg.call(zoom.transform as any, t);
+            } catch (e) { }
+        }
+
+        const savedPositions = localStorage.getItem('BOOK_DB_POSITIONS');
+        let hasSavedPositions = false;
+        if (savedPositions) {
+            try {
+                const parsedPositions = JSON.parse(savedPositions);
+                if (Object.keys(parsedPositions).length > 0) {
+                    hasSavedPositions = true;
+                    graphData.nodes.forEach(node => {
+                        if (parsedPositions[node.id]) {
+                            const clampedX = Math.min(Math.max(parsedPositions[node.id].x, node.radius + 10), width - node.radius - 10);
+                            const clampedY = Math.min(Math.max(parsedPositions[node.id].y, node.radius + 10), height - node.radius - 10);
+                            (node as any).x = clampedX;
+                            (node as any).y = clampedY;
+                            if (node.type === 'main') {
+                                node.fx = clampedX;
+                                node.fy = clampedY;
+                            }
+                        } else {
+                            const angle = Math.random() * 2 * Math.PI;
+                            const r = 80 + Math.random() * 150;
+                            const cx = Math.min(Math.max(width / 2 + r * Math.cos(angle), 80), width - 80);
+                            const cy = Math.min(Math.max(height / 2 + r * Math.sin(angle), 80), height - 80);
+                            (node as any).x = cx;
+                            (node as any).y = cy;
+                        }
+                    });
+                }
+            } catch (e) { }
+        }
 
         if (simulationRef.current) simulationRef.current.stop();
 
@@ -49,9 +91,11 @@ export default function BookDB() {
             .force('link', d3.forceLink<GraphNode, GraphLink>(graphData.links)
                 .id(d => d.id)
                 .distance(d => ((d.source as GraphNode).type === 'main' ? 300 : 150)))
-            .force('charge', d3.forceManyBody().strength(-1200))
-            .force('center', d3.forceCenter(width / 2, height / 2))
-            .force('collision', d3.forceCollide<GraphNode>().radius(d => d.radius + 30));
+            .force('charge', d3.forceManyBody().strength(hasSavedPositions ? -300 : -1200))
+            .force('center', hasSavedPositions ? null : d3.forceCenter(width / 2, height / 2))
+            .force('collision', d3.forceCollide<GraphNode>().radius(d => d.radius + 60).iterations(5))
+            .alpha(hasSavedPositions ? 0.4 : 1)
+            .alphaDecay(0.05);
 
         simulationRef.current = simulation;
 
@@ -86,11 +130,10 @@ export default function BookDB() {
                     })
                     .on('end', e => {
                         if (!e.active) simulation.alphaTarget(0);
-                        if (e.subject.type !== 'main') {
-                            e.subject.fx = null;
-                            e.subject.fy = null;
-                        }
+                        e.subject.fx = e.x;
+                        e.subject.fy = e.y;
                         svg.style('cursor', 'grab');
+                        saveSimulationState();
                     }) as any
             );
 
@@ -144,16 +187,44 @@ export default function BookDB() {
                 node.attr('opacity', 1);
             });
 
-        node.append('text')
-            .text(d => d.label)
-            .attr('dy', d => (d.type === 'main' ? '0.35em' : d.radius + 20))
-            .attr('text-anchor', 'middle')
-            .attr('fill', d => (d.type === 'main' ? '#fff' : '#4B5563'))
-            .attr('font-size', d => (d.type === 'main' ? '1.5rem' : '0.875rem'))
-            .attr('font-weight', '700')
-            .attr('pointer-events', 'none');
+        node.append('foreignObject')
+            .attr('x', d => (d.type === 'main' ? -d.radius : -75))
+            .attr('y', d => (d.type === 'main' ? -d.radius : d.radius + 15))
+            .attr('width', d => (d.type === 'main' ? d.radius * 2 : 150))
+            .attr('height', d => (d.type === 'main' ? d.radius * 2 : 100))
+            .style('overflow', 'visible')
+            .attr('pointer-events', 'none')
+            .append('xhtml:div')
+            .style('display', 'flex')
+            .style('flex-direction', 'column')
+            .style('align-items', 'center')
+            .style('justify-content', d => (d.type === 'main' ? 'center' : 'flex-start'))
+            .style('width', '100%')
+            .style('height', '100%')
+            .style('text-align', 'center')
+            .style('color', '#000000')
+            .style('font-size', d => (d.type === 'main' ? '1.5rem' : '0.875rem'))
+            .style('font-weight', '700')
+            .style('word-break', 'keep-all')
+            .style('overflow-wrap', 'break-word')
+            .append('xhtml:div')
+            .style('display', '-webkit-box')
+            .style('-webkit-line-clamp', '3')
+            .style('-webkit-box-orient', 'vertical')
+            .style('overflow', 'hidden')
+            .text(d => d.label);
 
         simulation.on('tick', () => {
+            graphData.nodes.forEach(n => {
+                const r = n.radius + 5;
+                (n as any).x = Math.min(Math.max((n as any).x, r), width - r);
+                (n as any).y = Math.min(Math.max((n as any).y, r), height - r);
+                if (n.fx !== null && n.fx !== undefined) {
+                    n.fx = Math.min(Math.max(n.fx, r), width - r);
+                    n.fy = Math.min(Math.max(n.fy!, r), height - r);
+                }
+            });
+
             link
                 .attr('x1', d => (d.source as any).x)
                 .attr('y1', d => (d.source as any).y)
@@ -163,14 +234,26 @@ export default function BookDB() {
             node.attr('transform', d => `translate(${(d as any).x}, ${(d as any).y})`);
         });
 
-        const mainNodes = graphData.nodes.filter(n => n.type === 'main');
-        const mainNodeRadius = 150;
+        if (!hasSavedPositions) {
+            const mainNodes = graphData.nodes.filter(n => n.type === 'main');
+            const mainNodeRadius = 150;
 
-        mainNodes.forEach((node, index) => {
-            const angle = (index / mainNodes.length) * 2 * Math.PI;
-            node.fx = width / 2 + mainNodeRadius * Math.cos(angle);
-            node.fy = height / 2 + mainNodeRadius * Math.sin(angle);
-        });
+            mainNodes.forEach((node, index) => {
+                const angle = (index / mainNodes.length) * 2 * Math.PI;
+                node.fx = width / 2 + mainNodeRadius * Math.cos(angle);
+                node.fy = height / 2 + mainNodeRadius * Math.sin(angle);
+            });
+        }
+
+        const saveSimulationState = () => {
+            const positions: Record<string, any> = {};
+            graphData.nodes.forEach(n => {
+                positions[n.id] = { x: (n as any).x, y: (n as any).y };
+            });
+            localStorage.setItem('BOOK_DB_POSITIONS', JSON.stringify(positions));
+        };
+
+        simulation.on('end', saveSimulationState);
     }, [graphData, setOverlayContent]);
 
     useEffect(() => {
