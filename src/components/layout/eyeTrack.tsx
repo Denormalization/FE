@@ -73,7 +73,6 @@ const normalizeCalibrationSamples = (value: unknown): CalibrationSample[] | null
 };
 
 export default function EyeTrack({ onGazeUpdate }: EyeTrackProps) {
-    const isDevMode = process.env.NODE_ENV === 'development';
 
     const [dotPos, setDotPos] = useState({ x: 500, y: 500 });
     const [trail, setTrail] = useState<{ x: number; y: number; id: number; opacity: number; scale: number }[]>([]);
@@ -542,7 +541,7 @@ export default function EyeTrack({ onGazeUpdate }: EyeTrackProps) {
                         targetPosRef.current = { x: finalX, y: finalY };
                     }
 
-                    if (isDevMode && now - lastDebugUpdateRef.current > 80) {
+                    if (now - lastDebugUpdateRef.current > 80) {
                         setDebugInfo({
                             baseX: data.x,
                             baseY: data.y,
@@ -559,7 +558,7 @@ export default function EyeTrack({ onGazeUpdate }: EyeTrackProps) {
                         lastDebugUpdateRef.current = now;
                     }
 
-                    if (isDevMode && Math.hypot(finalX - lastTrailPosRef.current.x, finalY - lastTrailPosRef.current.y) > 12) {
+                    if (Math.hypot(finalX - lastTrailPosRef.current.x, finalY - lastTrailPosRef.current.y) > 12) {
                         const newId = Date.now();
                         setTrail((prev) => [
                             ...prev.slice(-25),
@@ -654,7 +653,7 @@ export default function EyeTrack({ onGazeUpdate }: EyeTrackProps) {
             if (cleanupInit) cleanupInit();
             (window as any)._webgazerInitCalled = false;
         };
-    }, [isDevMode]);
+    });
 
     useEffect(() => {
         const animate = () => {
@@ -666,21 +665,19 @@ export default function EyeTrack({ onGazeUpdate }: EyeTrackProps) {
             currentPosRef.current.x += (targetPosRef.current.x - currentPosRef.current.x) * lerpFactor;
             currentPosRef.current.y += (targetPosRef.current.y - currentPosRef.current.y) * lerpFactor;
 
-            if (isDevMode) {
-                if (!Number.isNaN(currentPosRef.current.x) && !Number.isNaN(currentPosRef.current.y)) {
-                    setDotPos({ x: currentPosRef.current.x, y: currentPosRef.current.y });
-                }
-
-                setTrail((prev) =>
-                    prev
-                        .map((point) => ({
-                            ...point,
-                            opacity: point.opacity * 0.975,
-                            scale: point.scale * 0.985,
-                        }))
-                        .filter((point) => point.opacity > 0.02)
-                );
+            if (!Number.isNaN(currentPosRef.current.x) && !Number.isNaN(currentPosRef.current.y)) {
+                setDotPos({ x: currentPosRef.current.x, y: currentPosRef.current.y });
             }
+
+            setTrail((prev) =>
+                prev
+                    .map((point) => ({
+                        ...point,
+                        opacity: point.opacity * 0.975,
+                        scale: point.scale * 0.985,
+                    }))
+                    .filter((point) => point.opacity > 0.02)
+            );
 
             animationFrameRef.current = requestAnimationFrame(animate);
         };
@@ -689,7 +686,7 @@ export default function EyeTrack({ onGazeUpdate }: EyeTrackProps) {
         return () => {
             if (animationFrameRef.current) cancelAnimationFrame(animationFrameRef.current);
         };
-    }, [isDevMode]);
+    });
 
     const activeCalibrationPoints = calibrationPhase === 'validate' ? validationPoints : calibrationPoints;
 
@@ -779,13 +776,12 @@ export default function EyeTrack({ onGazeUpdate }: EyeTrackProps) {
                                 type="button"
                                 disabled={!isActive}
                                 onClick={calibrationPhase === 'collect' ? handleCollectPointClick : handleValidatePointClick}
-                                className={`absolute -translate-x-1/2 -translate-y-1/2 rounded-full border-2 transition-all ${
-                                    isActive
+                                className={`absolute -translate-x-1/2 -translate-y-1/2 rounded-full border-2 transition-all ${isActive
                                         ? 'h-9 w-9 border-white bg-emerald-500 shadow-[0_0_0_8px_rgba(16,185,129,0.28)] cursor-pointer'
                                         : isDonePoint
                                             ? 'h-6 w-6 border-emerald-200 bg-emerald-200/80'
                                             : 'h-5 w-5 border-white/70 bg-white/30'
-                                }`}
+                                    }`}
                                 style={{
                                     left: `${point.x}px`,
                                     top: `${point.y}px`,
@@ -801,92 +797,88 @@ export default function EyeTrack({ onGazeUpdate }: EyeTrackProps) {
 
     return (
         <>
-            {isDevMode && (
-                <>
-                    <div className="fixed inset-0 pointer-events-none z-[2147483647]">
-                        {trail.map((point) => (
-                            <div
-                                key={point.id}
-                                className="absolute rounded-full pointer-events-none"
-                                style={{
-                                    left: `${point.x}px`,
-                                    top: `${point.y}px`,
-                                    width: `${50 * point.scale}px`,
-                                    height: `${50 * point.scale}px`,
-                                    opacity: point.opacity,
-                                    transform: 'translate(-50%, -50%)',
-                                    background: 'radial-gradient(circle, rgba(62, 207, 142, 0.42) 0%, rgba(62, 207, 142, 0) 80%)',
-                                    filter: 'blur(6px)',
-                                }}
-                            />
-                        ))}
+            <div className="fixed inset-0 pointer-events-none z-[2147483647]">
+                {trail.map((point) => (
+                    <div
+                        key={point.id}
+                        className="absolute rounded-full pointer-events-none"
+                        style={{
+                            left: `${point.x}px`,
+                            top: `${point.y}px`,
+                            width: `${50 * point.scale}px`,
+                            height: `${50 * point.scale}px`,
+                            opacity: point.opacity,
+                            transform: 'translate(-50%, -50%)',
+                            background: 'radial-gradient(circle, rgba(62, 207, 142, 0.42) 0%, rgba(62, 207, 142, 0) 80%)',
+                            filter: 'blur(6px)',
+                        }}
+                    />
+                ))}
 
-                        <div
-                            className="absolute -translate-x-1/2 -translate-y-1/2 rounded-full border-2 border-emerald-400"
-                            style={{
-                                left: `${dotPos.x}px`,
-                                top: `${dotPos.y}px`,
-                                width: '34px',
-                                height: '34px',
-                                boxShadow: '0 0 16px rgba(74, 222, 128, 0.8)',
-                            }}
-                        >
-                            <div className="absolute top-1/2 left-1/2 h-2.5 w-2.5 -translate-x-1/2 -translate-y-1/2 rounded-full bg-emerald-300" />
+                <div
+                    className="absolute -translate-x-1/2 -translate-y-1/2 rounded-full border-2 border-emerald-400"
+                    style={{
+                        left: `${dotPos.x}px`,
+                        top: `${dotPos.y}px`,
+                        width: '34px',
+                        height: '34px',
+                        boxShadow: '0 0 16px rgba(74, 222, 128, 0.8)',
+                    }}
+                >
+                    <div className="absolute top-1/2 left-1/2 h-2.5 w-2.5 -translate-x-1/2 -translate-y-1/2 rounded-full bg-emerald-300" />
+                </div>
+
+                <div
+                    className="absolute -translate-x-1/2 -translate-y-1/2 rounded-full border border-rose-400/90 bg-rose-400/20"
+                    style={{
+                        left: `${debugInfo.baseX}px`,
+                        top: `${debugInfo.baseY}px`,
+                        width: '14px',
+                        height: '14px',
+                    }}
+                />
+            </div>
+
+            {hudVisible ? (
+                <div className="fixed right-4 top-4 z-[2147483647] pointer-events-auto w-[320px] rounded-lg border border-emerald-300/40 bg-black/70 p-3 text-[11px] text-emerald-100 backdrop-blur">
+                    <div className="mb-2 flex items-center justify-between">
+                        <strong className="text-xs tracking-wide">EyeTrack Dev HUD</strong>
+                        <div className="flex items-center gap-2">
+                            <span className={`rounded px-1.5 py-0.5 text-[10px] ${debugInfo.isFixating ? 'bg-emerald-500/30 text-emerald-100' : 'bg-amber-500/30 text-amber-100'}`}>
+                                {debugInfo.isFixating ? 'FIXATION' : 'SACCADE'}
+                            </span>
+                            <button
+                                type="button"
+                                onClick={() => setHudVisible(false)}
+                                className="flex h-4 w-4 items-center justify-center rounded text-emerald-300/60 hover:text-emerald-100 transition-colors"
+                            >
+                                ✕
+                            </button>
                         </div>
-
-                        <div
-                            className="absolute -translate-x-1/2 -translate-y-1/2 rounded-full border border-rose-400/90 bg-rose-400/20"
-                            style={{
-                                left: `${debugInfo.baseX}px`,
-                                top: `${debugInfo.baseY}px`,
-                                width: '14px',
-                                height: '14px',
-                            }}
-                        />
                     </div>
-
-                    {hudVisible ? (
-                        <div className="fixed right-4 top-4 z-[2147483647] pointer-events-auto w-[320px] rounded-lg border border-emerald-300/40 bg-black/70 p-3 text-[11px] text-emerald-100 backdrop-blur">
-                            <div className="mb-2 flex items-center justify-between">
-                                <strong className="text-xs tracking-wide">EyeTrack Dev HUD</strong>
-                                <div className="flex items-center gap-2">
-                                    <span className={`rounded px-1.5 py-0.5 text-[10px] ${debugInfo.isFixating ? 'bg-emerald-500/30 text-emerald-100' : 'bg-amber-500/30 text-amber-100'}`}>
-                                        {debugInfo.isFixating ? 'FIXATION' : 'SACCADE'}
-                                    </span>
-                                    <button
-                                        type="button"
-                                        onClick={() => setHudVisible(false)}
-                                        className="flex h-4 w-4 items-center justify-center rounded text-emerald-300/60 hover:text-emerald-100 transition-colors"
-                                    >
-                                        ✕
-                                    </button>
-                                </div>
-                            </div>
-                            <div className="grid grid-cols-2 gap-x-3 gap-y-1">
-                                <span>Raw</span>
-                                <span>{`${Math.round(debugInfo.baseX)}, ${Math.round(debugInfo.baseY)}`}</span>
-                                <span>Corrected</span>
-                                <span>{`${Math.round(debugInfo.correctedX)}, ${Math.round(debugInfo.correctedY)}`}</span>
-                                <span>Final</span>
-                                <span>{`${Math.round(debugInfo.finalX)}, ${Math.round(debugInfo.finalY)}`}</span>
-                                <span>Samples</span>
-                                <span>{debugInfo.sampleCount}</span>
-                                <span>Cal Offset</span>
-                                <span>{`${Math.round(debugInfo.calDx)}, ${Math.round(debugInfo.calDy)}`}</span>
-                                <span>Sentence</span>
-                                <span className="truncate">{debugInfo.closestId ?? '-'}</span>
-                            </div>
-                        </div>
-                    ) : (
-                        <button
-                            type="button"
-                            onClick={() => setHudVisible(true)}
-                            className="fixed right-4 top-4 z-[2147483647] pointer-events-auto rounded-md border border-emerald-300/40 bg-black/70 px-2 py-1 text-[10px] text-emerald-300/60 hover:text-emerald-100 backdrop-blur transition-colors"
-                        >
-                            HUD
-                        </button>
-                    )}
-                </>
+                    <div className="grid grid-cols-2 gap-x-3 gap-y-1">
+                        <span>Raw</span>
+                        <span>{`${Math.round(debugInfo.baseX)}, ${Math.round(debugInfo.baseY)}`}</span>
+                        <span>Corrected</span>
+                        <span>{`${Math.round(debugInfo.correctedX)}, ${Math.round(debugInfo.correctedY)}`}</span>
+                        <span>Final</span>
+                        <span>{`${Math.round(debugInfo.finalX)}, ${Math.round(debugInfo.finalY)}`}</span>
+                        <span>Samples</span>
+                        <span>{debugInfo.sampleCount}</span>
+                        <span>Cal Offset</span>
+                        <span>{`${Math.round(debugInfo.calDx)}, ${Math.round(debugInfo.calDy)}`}</span>
+                        <span>Sentence</span>
+                        <span className="truncate">{debugInfo.closestId ?? '-'}</span>
+                    </div>
+                </div>
+            ) : (
+                <button
+                    type="button"
+                    onClick={() => setHudVisible(true)}
+                    className="fixed right-4 top-4 z-[2147483647] pointer-events-auto rounded-md border border-emerald-300/40 bg-black/70 px-2 py-1 text-[10px] text-emerald-300/60 hover:text-emerald-100 backdrop-blur transition-colors"
+                >
+                    HUD
+                </button>
             )}
 
             {portalReady ? createPortal(calibrationLayer, document.body) : null}
